@@ -48,9 +48,11 @@ export default function TodayCard({ dateStr }: TodayCardProps) {
             }`}>
               {day.testament === 'OT' ? 'Ancien Testament' : 'Nouveau Testament'}
             </span>
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200">
-              Jour {day.dayNumber}
-            </span>
+            {day.dayNumber !== null && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200">
+                Jour {day.dayNumber}
+              </span>
+            )}
           </div>
           <h2 className="text-zinc-500 dark:text-zinc-400 text-xs font-medium mt-1">
             {formatHumanDate(targetDate)} {targetDate === todayStr && "• Aujourd'hui"}

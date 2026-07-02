@@ -244,7 +244,7 @@ export default function HistoryPage() {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-bold text-zinc-400 dark:text-zinc-500">
-                          {formatHumanDate(day.date)} • Jour {day.dayNumber}
+                          {formatHumanDate(day.date)}{day.dayNumber !== null ? ` • Jour ${day.dayNumber}` : ''}
                         </span>
                         {day.isSunday && (
                           <span className="text-[8px] bg-amber-500/10 text-amber-700 dark:text-amber-500 font-bold px-1.5 py-0.2 rounded uppercase">
