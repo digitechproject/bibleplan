@@ -14,6 +14,7 @@ import {
   formatHumanDate 
 } from '../utils/dateUtils';
 import NoteModal from './NoteModal';
+import TodayCard from './TodayCard';
 
 export default function CalendarView() {
   const router = useRouter();
@@ -272,10 +273,15 @@ export default function CalendarView() {
               return (
                 <div
                   key={idx}
-                  className={`min-h-[105px] p-2 flex flex-col justify-between transition-all duration-200 relative group ${
+                  onClick={() => updateUrl({ date: day.date })}
+                  className={`cursor-pointer min-h-[90px] md:min-h-[105px] p-2 flex flex-col justify-between transition-all duration-200 relative group ${
                     !isCurrentMonth ? 'bg-zinc-50/40 dark:bg-zinc-950/20 text-zinc-300 dark:text-zinc-700' : ''
                   } ${
-                    isToday ? 'ring-2 ring-amber-500 ring-inset z-10' : ''
+                    day.date === currentDateStr
+                      ? 'ring-2 ring-amber-500 ring-inset bg-amber-500/5 dark:bg-amber-950/10 z-10'
+                      : isToday
+                      ? 'ring-1 ring-amber-500/50 dark:ring-amber-500/30 ring-inset z-10'
+                      : ''
                   } ${
                     !isMatch ? 'opacity-25' : 'opacity-100'
                   }`}
@@ -309,18 +315,28 @@ export default function CalendarView() {
                         Révision
                       </span>
                     ) : (
-                      <span className="text-[11px] font-bold text-zinc-800 dark:text-zinc-200 truncate" title={day.label}>
-                        {day.label}
-                      </span>
+                      <>
+                        {/* Nom complet sur écran large */}
+                        <span className="hidden sm:inline text-[11px] font-bold text-zinc-800 dark:text-zinc-200 truncate" title={day.label}>
+                          {day.label}
+                        </span>
+                        {/* Abréviation compacte sur mobile */}
+                        <span className="inline sm:hidden text-[9px] font-extrabold text-zinc-800 dark:text-zinc-200 truncate" title={day.label}>
+                          {day.book ? `${day.book.aelfAbbr} ${day.chapter}` : ''}
+                        </span>
+                      </>
                     )}
                   </div>
 
                   {/* Actions de pied de cellule */}
-                  <div className="flex items-center justify-between pt-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200">
+                  <div className="hidden sm:flex items-center justify-between pt-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200">
                     <div className="flex gap-1">
                       {/* Note */}
                       <button
-                        onClick={() => setSelectedNoteDate(day.date)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedNoteDate(day.date);
+                        }}
                         className={`p-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors ${
                           hasNote ? 'text-amber-600 dark:text-amber-500' : 'text-zinc-400'
                         }`}
@@ -337,6 +353,7 @@ export default function CalendarView() {
                           href={day.url}
                           target="_blank"
                           rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
                           className="p-1 rounded text-zinc-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
                           title="Lire le chapitre (AELF)"
                         >
@@ -349,7 +366,10 @@ export default function CalendarView() {
 
                     {/* Statut check */}
                     <button
-                      onClick={() => toggleRead(day.date)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleRead(day.date);
+                      }}
                       className={`p-1 rounded transition-colors ${
                         day.status === 'read'
                           ? 'text-emerald-600 dark:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/20'
@@ -584,6 +604,13 @@ export default function CalendarView() {
           onClose={() => setSelectedNoteDate(null)}
         />
       )}
+      {/* Détail du jour sélectionné */}
+      <div className="mt-8 border-t border-zinc-200 dark:border-zinc-800/80 pt-6">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-4 px-1">
+          Détails de la lecture sélectionnée
+        </h3>
+        <TodayCard dateStr={currentDateStr} />
+      </div>
     </div>
   );
 }

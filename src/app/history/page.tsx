@@ -5,6 +5,7 @@ import { useReadingPlan } from '@/hooks/useReadingPlan';
 import { START_DATE_STR, formatHumanDate, formatHumanMonth } from '@/utils/dateUtils';
 import { BIBLE_BOOKS } from '@/data/bibleData';
 import NoteModal from '@/components/NoteModal';
+import PageHeader from '@/components/PageHeader';
 
 export default function HistoryPage() {
   const { getDaysForPeriod, todayStr, toggleRead, getDayNote, isMounted } = useReadingPlan();
@@ -86,14 +87,10 @@ export default function HistoryPage() {
 
   return (
     <div className="space-y-6 pb-12">
-      <div>
-        <h1 className="text-3xl font-extrabold text-zinc-900 dark:text-zinc-50 tracking-tight">
-          Historique des lectures
-        </h1>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-          Consultez et gérez vos lectures et notes passées depuis le début du défi.
-        </p>
-      </div>
+      <PageHeader 
+        title="Historique des lectures" 
+        subtitle="Consultez et gérez vos lectures et notes passées depuis le début du défi." 
+      />
 
       {/* Zone de filtres */}
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-5 rounded-2xl shadow-sm space-y-4">

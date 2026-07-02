@@ -2,18 +2,15 @@
 
 import React, { Suspense } from 'react';
 import CalendarView from '@/components/CalendarView';
+import PageHeader from '@/components/PageHeader';
 
 export default function CalendarPage() {
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-extrabold text-zinc-900 dark:text-zinc-50 tracking-tight">
-          Calendrier des lectures
-        </h1>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-          Visualisez la chronologie du défi, planifiez vos lectures et gérez vos notes spirituelles.
-        </p>
-      </div>
+      <PageHeader 
+        title="Calendrier des lectures" 
+        subtitle="Visualisez la chronologie du défi, planifiez vos lectures et gérez vos notes spirituelles." 
+      />
 
       <Suspense fallback={
         <div className="space-y-6 animate-pulse">

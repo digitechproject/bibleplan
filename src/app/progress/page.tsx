@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { useReadingPlan } from '@/hooks/useReadingPlan';
 import { BIBLE_BOOKS } from '@/data/bibleData';
+import PageHeader from '@/components/PageHeader';
 
 export default function ProgressPage() {
   const { readDates, stats, getReadingDay, isMounted } = useReadingPlan();
@@ -81,14 +82,10 @@ export default function ProgressPage() {
 
   return (
     <div className="space-y-8 pb-12">
-      <div>
-        <h1 className="text-3xl font-extrabold text-zinc-900 dark:text-zinc-50 tracking-tight">
-          Progression de lecture
-        </h1>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-          Suivez votre avancement livre par livre et observez vos statistiques s'améliorer au fil du temps.
-        </p>
-      </div>
+      <PageHeader 
+        title="Progression de lecture" 
+        subtitle="Suivez votre avancement livre par livre et observez vos statistiques s'améliorer au fil du temps." 
+      />
 
       {/* Cartes de statistiques en haut */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { useReadingPlan } from '@/hooks/useReadingPlan';
 import { START_DATE_STR, formatHumanDate, addDays } from '@/utils/dateUtils';
 import NoteModal from '@/components/NoteModal';
+import PageHeader from '@/components/PageHeader';
 
 export default function SearchPage() {
   const { notes, getReadingDay, getDaysForPeriod, isMounted } = useReadingPlan();
@@ -64,14 +65,10 @@ export default function SearchPage() {
 
   return (
     <div className="space-y-6 pb-12">
-      <div>
-        <h1 className="text-3xl font-extrabold text-zinc-900 dark:text-zinc-50 tracking-tight">
-          Recherche globale
-        </h1>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-          Recherchez un livre, un chapitre, une note, une date ou une semaine dans tout le planning sur 3 ans.
-        </p>
-      </div>
+      <PageHeader 
+        title="Recherche globale" 
+        subtitle="Recherchez un livre, un chapitre, une note, une date ou une semaine." 
+      />
 
       {/* Barre de recherche */}
       <div className="relative">

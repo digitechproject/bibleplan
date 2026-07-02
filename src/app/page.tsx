@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useReadingPlan } from '@/hooks/useReadingPlan';
 import TodayCard from '@/components/TodayCard';
 import ProgressSummary from '@/components/ProgressSummary';
+import PageHeader from '@/components/PageHeader';
 import { addDays, formatDate, formatHumanDate } from '@/utils/dateUtils';
 
 export default function Home() {
@@ -31,27 +32,7 @@ export default function Home() {
   return (
     <div className="space-y-8 pb-10">
       {/* En-tête de bienvenue */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-zinc-900 dark:text-zinc-50 tracking-tight">
-            Bonjour
-          </h1>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-            Prêt pour votre lecture quotidienne ?
-          </p>
-        </div>
-        
-        {/* Accès direct au calendrier */}
-        <Link
-          href="/calendar"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 font-semibold text-sm border border-amber-500/20 transition-all duration-200 self-start sm:self-auto"
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-          Voir le calendrier complet
-        </Link>
-      </div>
+      <PageHeader title="Bonjour" subtitle="Prêt pour votre lecture quotidienne ?" />
 
       {/* Grid principal */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
