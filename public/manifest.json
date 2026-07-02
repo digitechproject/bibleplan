@@ -1,0 +1,17 @@
+{
+  "name": "Planificateur de Lecture Biblique",
+  "short_name": "Plan Bible",
+  "description": "Suivez et planifiez votre défi de lecture biblique de façon autonome et hors ligne.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fafafa",
+  "theme_color": "#d97706",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ]
+}
