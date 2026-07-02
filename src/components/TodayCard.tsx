@@ -40,13 +40,18 @@ export default function TodayCard({ dateStr }: TodayCardProps) {
       {/* En-tête de la carte */}
       <div className="px-6 py-5 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
         <div>
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider ${
-            day.testament === 'OT' 
-              ? 'bg-orange-100 text-orange-800 dark:bg-orange-950/50 dark:text-orange-300' 
-              : 'bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300'
-          }`}>
-            {day.testament === 'OT' ? 'Ancien Testament' : 'Nouveau Testament'}
-          </span>
+          <div className="flex flex-wrap gap-1.5 items-center">
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider ${
+              day.testament === 'OT' 
+                ? 'bg-orange-100 text-orange-800 dark:bg-orange-950/50 dark:text-orange-300' 
+                : 'bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300'
+            }`}>
+              {day.testament === 'OT' ? 'Ancien Testament' : 'Nouveau Testament'}
+            </span>
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200">
+              Jour {day.dayNumber}
+            </span>
+          </div>
           <h2 className="text-zinc-500 dark:text-zinc-400 text-xs font-medium mt-1">
             {formatHumanDate(targetDate)} {targetDate === todayStr && "• Aujourd'hui"}
           </h2>

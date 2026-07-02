@@ -1,5 +1,5 @@
 import { BIBLE_BOOKS, BibleBook, OT_BOOKS, NT_BOOKS, TOTAL_OT_CHAPTERS, TOTAL_NT_CHAPTERS } from '../data/bibleData';
-import { getWeekIndex, getDayOfWeek, addDays } from './dateUtils';
+import { getWeekIndex, getDayOfWeek, addDays, getDayNumber } from './dateUtils';
 import { ReadingDay, ChapterInfo } from '../types';
 
 /**
@@ -37,6 +37,7 @@ export function getChapterFromCumulativeIndex(
 export function getReadingForDate(dateStr: string): ReadingDay {
   const weekIndex = getWeekIndex(dateStr);
   const dayOfWeek = getDayOfWeek(dateStr); // 0 = Lundi, ..., 6 = Dimanche
+  const dayNumber = getDayNumber(dateStr);
   const isSunday = dayOfWeek === 6;
 
   // Semaine impaire => Ancien Testament, Semaine paire => Nouveau Testament
@@ -75,6 +76,7 @@ export function getReadingForDate(dateStr: string): ReadingDay {
       date: dateStr,
       dayOfWeek,
       weekIndex,
+      dayNumber,
       testament,
       book: null,
       chapter: null,
@@ -104,6 +106,7 @@ export function getReadingForDate(dateStr: string): ReadingDay {
       date: dateStr,
       dayOfWeek,
       weekIndex,
+      dayNumber,
       testament,
       book,
       chapter,

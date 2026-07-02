@@ -119,7 +119,7 @@ export default function SearchPage() {
                       <div>
                         <div className="flex justify-between items-start">
                           <span className="text-[10px] font-bold text-zinc-400">
-                            {formatHumanDate(day.date)}
+                            {formatHumanDate(day.date)} • Jour {day.dayNumber}
                           </span>
                           <span className="text-[9px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold px-1.5 py-0.2 rounded uppercase">
                             Note rédigée
@@ -169,7 +169,7 @@ export default function SearchPage() {
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] font-bold text-zinc-400">
-                            {formatHumanDate(day.date)} (Semaine {day.weekIndex})
+                            {formatHumanDate(day.date)} (Semaine {day.weekIndex}) • Jour {day.dayNumber}
                           </span>
                           {isRead && (
                             <span className="text-[8px] bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30 px-1 rounded-full font-bold">

@@ -34,6 +34,10 @@ export function getWeekIndex(dateStr: string): number {
   return Math.floor(diff / 7) + 1;
 }
 
+export function getDayNumber(dateStr: string): number {
+  return getDaysDifference(dateStr, START_DATE_STR) + 1;
+}
+
 export function getDayOfWeek(dateStr: string): number {
   // En JS, 0 = Dimanche, 1 = Lundi...
   // Nous voulons : 0 = Lundi, 1 = Mardi... 6 = Dimanche

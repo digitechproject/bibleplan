@@ -46,7 +46,7 @@ export default function Home() {
             <div className="p-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm flex flex-col justify-between h-28">
               <div>
                 <span className="text-[10px] uppercase font-bold text-zinc-400 dark:text-zinc-500 tracking-wider">
-                  Lecture d'hier
+                  Lecture d'hier • Jour {yesterdayReading.dayNumber}
                 </span>
                 <h4 className="text-zinc-900 dark:text-zinc-50 font-bold text-sm mt-0.5 truncate">
                   {yesterdayReading.label}
@@ -73,7 +73,7 @@ export default function Home() {
             <div className="p-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm flex flex-col justify-between h-28">
               <div>
                 <span className="text-[10px] uppercase font-bold text-zinc-400 dark:text-zinc-500 tracking-wider">
-                  Lecture de demain
+                  Lecture de demain • Jour {tomorrowReading.dayNumber}
                 </span>
                 <h4 className="text-zinc-900 dark:text-zinc-50 font-bold text-sm mt-0.5 truncate">
                   {tomorrowReading.label}

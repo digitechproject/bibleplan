@@ -288,13 +288,18 @@ export default function CalendarView() {
                 >
                   {/* Jour et indicateur */}
                   <div className="flex items-center justify-between">
-                    <span className={`text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center ${
-                      isToday 
-                        ? 'bg-amber-500 text-white shadow-sm' 
-                        : isCurrentMonth ? 'text-zinc-700 dark:text-zinc-300' : 'text-zinc-400 dark:text-zinc-600'
-                    }`}>
-                      {day.date.split('-')[2]}
-                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className={`text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center ${
+                        isToday 
+                          ? 'bg-amber-500 text-white shadow-sm' 
+                          : isCurrentMonth ? 'text-zinc-700 dark:text-zinc-300' : 'text-zinc-400 dark:text-zinc-600'
+                      }`}>
+                        {day.date.split('-')[2]}
+                      </span>
+                      <span className="text-[9px] font-medium text-zinc-400 dark:text-zinc-500">
+                        J.{day.dayNumber}
+                      </span>
+                    </div>
                     
                     {/* Badge type de semaine (uniquement le lundi de chaque semaine dans la grille) */}
                     {day.dayOfWeek === 0 && isCurrentMonth && (
@@ -421,9 +426,14 @@ export default function CalendarView() {
               >
                 <div>
                   <div className="flex justify-between items-start">
-                    <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500">
-                      {formatHumanDate(day.date).split(' ')[0]} {day.date.split('-')[2]}
-                    </span>
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500">
+                        {formatHumanDate(day.date).split(' ')[0]} {day.date.split('-')[2]}
+                      </span>
+                      <span className="text-[9px] font-extrabold text-amber-600 dark:text-amber-500">
+                        Jour {day.dayNumber}
+                      </span>
+                    </div>
                     {day.isSunday && (
                       <span className="text-[9px] bg-amber-500/10 text-amber-700 dark:text-amber-500 font-bold px-1.5 py-0.2 rounded uppercase">
                         Rév.
@@ -549,7 +559,7 @@ export default function CalendarView() {
                           
                           <div>
                             <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
-                              {formatHumanDate(day.date).split(' ')[0]} {day.date.split('-')[2]} {isToday && "• Aujourd'hui"}
+                              {formatHumanDate(day.date).split(' ')[0]} {day.date.split('-')[2]} • Jour {day.dayNumber} {isToday && "• Aujourd'hui"}
                             </span>
                             <span className="font-extrabold text-sm text-zinc-900 dark:text-zinc-50">
                               {day.label}

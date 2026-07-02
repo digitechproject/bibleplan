@@ -10,6 +10,7 @@ export interface ReadingDay {
   date: string; // YYYY-MM-DD
   dayOfWeek: number; // 0 (Lundi) à 6 (Dimanche)
   weekIndex: number; // Index de semaine de défi (1-based)
+  dayNumber: number; // Numéro de jour (1-based) à partir du début du défi
   testament: 'OT' | 'NT';
   book: BibleBook | null; // null si Dimanche (jour de révision)
   chapter: number | null; // null si Dimanche
