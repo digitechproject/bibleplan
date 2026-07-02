@@ -1,8 +1,10 @@
-const CACHE_NAME = 'plan-bible-v1';
+const CACHE_NAME = 'plan-bible-v2';
 const ASSETS_TO_CACHE = [
   '/',
   '/favicon.ico',
-  '/manifest.json'
+  '/manifest.json',
+  '/icon-192.png',
+  '/icon-512.png'
 ];
 
 self.addEventListener('install', (event) => {

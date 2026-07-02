@@ -15,8 +15,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Planificateur de Lecture Biblique",
+  title: "Bible Plan",
   description: "Suivez et planifiez votre défi de lecture biblique de façon intelligente et autonome.",
+  manifest: "/manifest.json",
+  icons: {
+    apple: "/icon-192.png",
+  }
 };
 
 export default function RootLayout({
