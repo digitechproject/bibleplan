@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const resolvedParams = params instanceof Promise ? await params : params;
   const dayNum = parseInt(resolvedParams.day, 10);
 
-  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bibleplan.vercel.app').replace(/\/$/, '');
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bibleplan-bice.vercel.app').replace(/\/$/, '');
   const siteName = 'Défi Bible 365';
 
   // Valeurs par défaut robustes
