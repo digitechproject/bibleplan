@@ -111,10 +111,14 @@ export default function ReadingDayPage() {
     const url = getPageUrl();
     const rd = getReadingDay(dateStr);
     const title = content?.teaching_title || rd?.label || `Jour ${dayNum}`;
+    // Pour navigator.share : on met le lien UNIQUEMENT dans url (pas dans text)
+    // pour éviter la duplication automatique sur WhatsApp/iOS
+    const shareTitle = `Jour ${dayNum} — ${title} | Défi Bible 365`;
+    const shareText = `📖 Défi Bible 365 — Jour ${dayNum}\n${title}`;
 
     if (navigator.share) {
       try {
-        await navigator.share({ title: `Jour ${dayNum} — ${title}`, text: getShareText(), url });
+        await navigator.share({ title: shareTitle, text: shareText, url });
         return;
       } catch (_) { /* annulé par l'utilisateur */ }
     }
