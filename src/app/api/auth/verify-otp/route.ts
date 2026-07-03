@@ -56,12 +56,18 @@ export async function POST(request: Request) {
     }
 
     // 4. Générer le lien de connexion sécurisé (magiclink)
-    const origin = request.headers.get('origin') || 'http://localhost:3000';
+    // On utilise NEXT_PUBLIC_SITE_URL (variable de déploiement) en priorité,
+    // puis le header origin (fiable en production), puis localhost en fallback dev.
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
+      || request.headers.get('origin')
+      || 'http://localhost:3000';
+    const redirectTo = `${siteUrl.replace(/\/$/, '')}/`;
+
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
       email: email,
       options: {
-        redirectTo: `${origin}/`,
+        redirectTo,
       },
     });
 
