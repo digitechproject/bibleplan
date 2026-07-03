@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useReadingPlan } from '@/hooks/useReadingPlan';
-import { supabase } from '@/utils/supabaseClient';
+import { supabase, isSupabaseConfigured } from '@/utils/supabaseClient';
 import PageHeader from '@/components/PageHeader';
 import { formatHumanDate } from '@/utils/dateUtils';
 
@@ -33,6 +33,10 @@ export default function TimelinePage() {
     if (!isMounted) return;
 
     const fetchTitles = async () => {
+      if (!isSupabaseConfigured) {
+        setLoading(false);
+        return;
+      }
       try {
         const { data, error } = await supabase
           .from('daily_contents')

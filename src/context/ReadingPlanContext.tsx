@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
-import { supabase } from '../utils/supabaseClient';
+import { supabase, isSupabaseConfigured } from '../utils/supabaseClient';
 import { BIBLE_BOOKS, BibleBook } from '../data/bibleData';
 import { ReadingDay, DayNote, BibleStats } from '../types';
 import { getReadingForDate } from '../utils/bibleUtils';
@@ -33,6 +33,8 @@ export function ReadingPlanProvider({ children }: { children: React.ReactNode })
 
   // Suivre la session utilisateur Supabase
   useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
     // Session initiale
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
@@ -57,6 +59,7 @@ export function ReadingPlanProvider({ children }: { children: React.ReactNode })
   }, []);
 
   const fetchProfile = async (userId: string) => {
+    if (!isSupabaseConfigured) return;
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -72,12 +75,14 @@ export function ReadingPlanProvider({ children }: { children: React.ReactNode })
   };
 
   const signOut = async () => {
+    if (!isSupabaseConfigured) return;
     await supabase.auth.signOut();
     setUser(null);
     setProfile(null);
   };
 
   const syncWithSupabase = async (userId: string) => {
+    if (!isSupabaseConfigured) return;
     try {
       // 1. Synchroniser la progression
       const { data: dbProgress, error: progressError } = await supabase

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useReadingPlan } from '@/hooks/useReadingPlan';
-import { supabase } from '@/utils/supabaseClient';
+import { supabase, isSupabaseConfigured } from '@/utils/supabaseClient';
 import TodayCard from '@/components/TodayCard';
 import ProgressSummary from '@/components/ProgressSummary';
 import PageHeader from '@/components/PageHeader';
@@ -34,6 +34,10 @@ export default function Home() {
     if (!isMounted || !todayStr) return;
 
     const fetchContent = async () => {
+      if (!isSupabaseConfigured) {
+        setLoading(false);
+        return;
+      }
       try {
         const { data, error } = await supabase
           .from('daily_contents')

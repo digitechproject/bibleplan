@@ -13,7 +13,7 @@ import {
   formatHumanMonth, 
   formatHumanDate 
 } from '../utils/dateUtils';
-import { supabase } from '../utils/supabaseClient';
+import { supabase, isSupabaseConfigured } from '../utils/supabaseClient';
 import NoteModal from './NoteModal';
 import TodayCard from './TodayCard';
 
@@ -35,6 +35,7 @@ export default function CalendarView() {
   // Charger les indicateurs de médias et d'enseignements
   useEffect(() => {
     const fetchDailyContentsInfo = async () => {
+      if (!isSupabaseConfigured) return;
       try {
         const { data, error } = await supabase
           .from('daily_contents')
