@@ -1,47 +1,64 @@
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
 import { createClient } from '@supabase/supabase-js';
 
-// Constantes du plan
 const START_DATE_STR = '2026-06-29';
 
 function addDays(dateStr: string, days: number): string {
-  const date = new Date(dateStr + 'T00:00:00');
-  date.setDate(date.getDate() + days);
-  return date.toISOString().split('T')[0];
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  return d.toISOString().split('T')[0];
 }
 
 function formatHumanDate(dateStr: string): string {
-  const date = new Date(dateStr + 'T00:00:00');
-  return date.toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  try {
+    return new Date(dateStr + 'T00:00:00').toLocaleDateString('fr-FR', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+    });
+  } catch {
+    return dateStr;
+  }
 }
 
-interface Props {
-  params: Promise<{ day: string }>;
-}
+type Props = {
+  params: { day: string } | Promise<{ day: string }>;
+};
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { day } = await params;
-  const dayNum = parseInt(day, 10);
+  // Compatible Next.js 15 et 16 (params peut être sync ou async)
+  const resolvedParams = params instanceof Promise ? await params : params;
+  const dayNum = parseInt(resolvedParams.day, 10);
+
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bibleplan.vercel.app').replace(/\/$/, '');
+  const siteName = 'Défi Bible 365';
+
+  // Valeurs par défaut robustes
+  const defaultTitle = `${siteName} — Plan de lecture biblique`;
+  const defaultDescription = 'Rejoins le défi de lecture de la Bible en 365 jours. Un plan structuré, semaine par semaine.';
 
   if (isNaN(dayNum) || dayNum < 1) {
-    return { title: 'Lecture quotidienne – Défi Bible 365' };
+    return {
+      title: defaultTitle,
+      description: defaultDescription,
+      openGraph: { title: defaultTitle, description: defaultDescription, siteName, type: 'website', locale: 'fr_FR' },
+      twitter: { card: 'summary', title: defaultTitle, description: defaultDescription },
+    };
   }
 
-  // Calculer la date
+  // Calculer la date à partir du numéro de jour
   const dayIndex = dayNum - 1;
   const weekIndex = Math.floor(dayIndex / 6) + 1;
   const dayOfWeek = dayIndex % 6;
   const daysOffset = (weekIndex - 1) * 7 + dayOfWeek;
   const dateStr = addDays(START_DATE_STR, daysOffset);
   const humanDate = formatHumanDate(dateStr);
+  const pageUrl = `${siteUrl}/read/${dayNum}`;
 
-  // Récupérer le titre de l'enseignement depuis Supabase
   let teachingTitle: string | null = null;
-  let teachingExcerpt: string | null = null;
+  let excerpt: string | null = null;
 
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (supabaseUrl && serviceKey) {
       const admin = createClient(supabaseUrl, serviceKey, {
@@ -52,34 +69,31 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         .from('daily_contents')
         .select('teaching_title, teaching_content')
         .eq('date', dateStr)
-        .single();
+        .maybeSingle(); // maybeSingle évite l'erreur si 0 résultats
 
-      if (data) {
-        teachingTitle = data.teaching_title || null;
-        // Extraire un extrait du contenu HTML (enlever les balises)
-        if (data.teaching_content) {
-          teachingExcerpt = data.teaching_content
-            .replace(/<[^>]*>/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim()
-            .slice(0, 160);
-        }
+      if (data?.teaching_title) {
+        teachingTitle = data.teaching_title;
+      }
+      if (data?.teaching_content) {
+        excerpt = (data.teaching_content as string)
+          .replace(/<[^>]*>/g, ' ')
+          .replace(/&[a-z]+;/gi, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .slice(0, 155);
       }
     }
-  } catch (_) {
-    // Silencieux — les métadonnées restent génériques
+  } catch {
+    // Silencieux : on utilise les valeurs de fallback
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-  const pageUrl = `${siteUrl}/read/${dayNum}`;
-
   const title = teachingTitle
-    ? `Jour ${dayNum} — ${teachingTitle} | Défi Bible 365`
-    : `Jour ${dayNum} — Semaine ${weekIndex} | Défi Bible 365`;
+    ? `Jour ${dayNum} — ${teachingTitle} | ${siteName}`
+    : `Jour ${dayNum} • Semaine ${weekIndex} | ${siteName}`;
 
-  const description = teachingExcerpt
-    ? `${humanDate} • ${teachingExcerpt}`
-    : `Plan de lecture Bible 365 — Semaine ${weekIndex} • ${humanDate}. Rejoignez le défi de lecture biblique quotidienne.`;
+  const description = excerpt
+    ? `${humanDate} • ${excerpt}`
+    : `Plan de lecture – Jour ${dayNum}, Semaine ${weekIndex} • ${humanDate}. Rejoins le défi de lecture biblique en 365 jours.`;
 
   return {
     title,
@@ -88,7 +102,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title,
       description,
       url: pageUrl,
-      siteName: 'Défi Bible 365',
+      siteName,
       type: 'article',
       locale: 'fr_FR',
     },
