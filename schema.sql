@@ -12,27 +12,28 @@ create table public.profiles (
 -- RLS pour profiles
 alter table public.profiles enable row level security;
 
+-- Fonction helper pour vérifier si un utilisateur est admin sans récursion infinie
+create or replace function public.is_admin(user_id uuid)
+returns boolean as $$
+begin
+    return exists (
+        select 1 from public.profiles
+        where id = user_id and role = 'admin'
+    );
+end;
+$$ language plpgsql security definer;
+
 create policy "Les utilisateurs peuvent voir leur propre profil."
     on public.profiles for select
     using (auth.uid() = id);
 
 create policy "Les administrateurs peuvent voir tous les profils."
     on public.profiles for select
-    using (
-        exists (
-            select 1 from public.profiles
-            where profiles.id = auth.uid() and profiles.role = 'admin'
-        )
-    );
+    using (public.is_admin(auth.uid()));
 
 create policy "Les administrateurs peuvent modifier les profils."
     on public.profiles for update
-    using (
-        exists (
-            select 1 from public.profiles
-            where profiles.id = auth.uid() and profiles.role = 'admin'
-        )
-    );
+    using (public.is_admin(auth.uid()));
 
 -- Trigger pour créer automatiquement le profil utilisateur à l'inscription
 create or replace function public.handle_new_user()
@@ -77,12 +78,7 @@ create policy "Tout le monde peut lire le contenu des journées."
 
 create policy "Seuls les administrateurs peuvent modifier le contenu des journées."
     on public.daily_contents for all
-    using (
-        exists (
-            select 1 from public.profiles
-            where profiles.id = auth.uid() and profiles.role = 'admin'
-        )
-    );
+    using (public.is_admin(auth.uid()));
 
 
 -- 4. Création de la table user_progress
@@ -133,3 +129,18 @@ create policy "Les utilisateurs peuvent créer ou modifier leurs propres notes."
     on public.user_notes for all
     using (auth.uid() = user_id)
     with check (auth.uid() = user_id);
+
+-- Table pour stocker les codes OTP gérés par Brevo (Phase d'authentification personnalisée)
+create table if not exists public.user_otps (
+    id uuid default gen_random_uuid() primary key,
+    email text not null,
+    code text not null,
+    expires_at timestamp with time zone not null,
+    created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Index pour accélérer les recherches d'OTP
+create index if not exists user_otps_email_code_idx on public.user_otps(email, code);
+
+-- RLS pour user_otps (Seul le service_role peut y accéder pour une sécurité maximale)
+alter table public.user_otps enable row level security;

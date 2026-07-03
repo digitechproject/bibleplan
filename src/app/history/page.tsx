@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import Link from 'next/link';
 import { useReadingPlan } from '@/hooks/useReadingPlan';
 import { START_DATE_STR, formatHumanDate, formatHumanMonth } from '@/utils/dateUtils';
 import { BIBLE_BOOKS } from '@/data/bibleData';
+import { supabase, isSupabaseConfigured } from '@/utils/supabaseClient';
 import NoteModal from '@/components/NoteModal';
 import PageHeader from '@/components/PageHeader';
 
@@ -17,6 +19,27 @@ export default function HistoryPage() {
   const [selectedTestament, setSelectedTestament] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedNoteDate, setSelectedNoteDate] = useState<string | null>(null);
+  const [contentDates, setContentDates] = useState<Set<string>>(new Set());
+
+  // Charger les dates qui ont du contenu personnalisé
+  React.useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    const fetchContentDates = async () => {
+      const { data } = await supabase
+        .from('daily_contents')
+        .select('date, audio_url, video_url, teaching_content, teaching_title');
+      if (data) {
+        const set = new Set<string>();
+        data.forEach(item => {
+          if (item.audio_url || item.video_url || item.teaching_content || item.teaching_title) {
+            set.add(item.date);
+          }
+        });
+        setContentDates(set);
+      }
+    };
+    fetchContentDates();
+  }, []);
 
   // Générer l'historique complet (du début du défi jusqu'à aujourd'hui)
   const historyDays = useMemo(() => {
@@ -275,19 +298,31 @@ export default function HistoryPage() {
                       {hasNote ? 'Voir la note' : 'Ajouter une note'}
                     </button>
 
-                    {/* AELF Link */}
+                    {/* Lien lecture : local si contenu, sinon AELF */}
                     {!day.isSunday && (
-                      <a
-                        href={day.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center p-2 rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors"
-                        title="Lire sur AELF"
-                      >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                        </svg>
-                      </a>
+                      contentDates.has(day.date) ? (
+                        <Link
+                          href={`/read/${day.dayNumber}`}
+                          className="inline-flex items-center justify-center p-2 rounded-lg border border-amber-500/30 dark:border-amber-500/20 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/20 transition-colors"
+                          title="Lire l'enseignement"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                          </svg>
+                        </Link>
+                      ) : (
+                        <a
+                          href={day.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center p-2 rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors"
+                          title="Lire sur AELF"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
+                      )
                     )}
                   </div>
                 </div>

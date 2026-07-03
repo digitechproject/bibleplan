@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useReadingPlan } from '../hooks/useReadingPlan';
 import { ReadingDay } from '../types';
@@ -20,7 +21,7 @@ import TodayCard from './TodayCard';
 export default function CalendarView() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { getReadingDay, getDaysForPeriod, toggleRead, getDayNote, isMounted, todayStr } = useReadingPlan();
+  const { getReadingDay, getDaysForPeriod, toggleRead, getDayNote, isMounted, todayStr, user, profile } = useReadingPlan();
 
   // États locaux synchronisés avec l'URL
   const currentView = (searchParams.get('view') as 'week' | 'month' | 'extended') || 'month';
@@ -31,6 +32,7 @@ export default function CalendarView() {
   // État pour la modale de note
   const [selectedNoteDate, setSelectedNoteDate] = useState<string | null>(null);
   const [dailyContentMap, setDailyContentMap] = useState<Record<string, { hasAudio: boolean; hasVideo: boolean; hasTeaching: boolean }>>({});
+  const [contentDates, setContentDates] = useState<Set<string>>(new Set());;
 
   // Charger les indicateurs de médias et d'enseignements
   useEffect(() => {
@@ -44,14 +46,19 @@ export default function CalendarView() {
         if (error) throw error;
 
         const map: Record<string, { hasAudio: boolean; hasVideo: boolean; hasTeaching: boolean }> = {};
+        const withContent = new Set<string>();
         data?.forEach(item => {
           map[item.date] = {
             hasAudio: !!item.audio_url,
             hasVideo: !!item.video_url,
             hasTeaching: !!item.teaching_content,
           };
+          if (item.audio_url || item.video_url || item.teaching_content) {
+            withContent.add(item.date);
+          }
         });
         setDailyContentMap(map);
+        setContentDates(withContent);
       } catch (e) {
         console.error("Erreur lors du chargement des indicateurs du calendrier :", e);
       }
@@ -300,14 +307,22 @@ export default function CalendarView() {
               // Alternance visuelle des lignes de semaine (OT vs NT)
               const isOtWeek = day.weekIndex % 2 !== 0;
 
+              const isAdmin = user && profile?.role === 'admin';
+              const isFuture = day.date > todayStr;
+              const isLocked = isFuture && !isAdmin;
+
               return (
                 <div
                   key={idx}
-                  onClick={() => updateUrl({ date: day.date })}
-                  className={`cursor-pointer min-h-[90px] md:min-h-[105px] p-2 flex flex-col justify-between transition-all duration-200 relative group ${
-                    !isCurrentMonth ? 'bg-zinc-50/40 dark:bg-zinc-950/20 text-zinc-300 dark:text-zinc-700' : ''
+                  onClick={() => !isLocked && updateUrl({ date: day.date })}
+                  className={`min-h-[90px] md:min-h-[105px] p-2 flex flex-col justify-between transition-all duration-200 relative group ${
+                    isLocked 
+                      ? 'bg-zinc-100/40 dark:bg-zinc-900/10 text-zinc-300 dark:text-zinc-700 cursor-not-allowed opacity-40' 
+                      : 'cursor-pointer'
                   } ${
-                    day.date === currentDateStr
+                    !isCurrentMonth && !isLocked ? 'bg-zinc-50/40 dark:bg-zinc-950/20 text-zinc-300 dark:text-zinc-700' : ''
+                  } ${
+                    day.date === currentDateStr && !isLocked
                       ? 'ring-2 ring-amber-500 ring-inset bg-amber-500/5 dark:bg-amber-950/10 z-10'
                       : isToday
                       ? 'ring-1 ring-amber-500/50 dark:ring-amber-500/30 ring-inset z-10'
@@ -332,8 +347,8 @@ export default function CalendarView() {
                         </span>
                       )}
                       
-                      {/* Petits indicateurs discrets de contenu quotidien */}
-                      {dailyContentMap[day.date] && (
+                      {/* Petits indicateurs discrets de contenu quotidien - Masqués pour les jours futurs verrouillés */}
+                      {!isLocked && dailyContentMap[day.date] && (
                         <div className="flex gap-0.5 items-center">
                           {dailyContentMap[day.date].hasAudio && (
                             <span className="w-1 h-1 rounded-full bg-amber-600" title="Audio disponible" />
@@ -498,38 +513,74 @@ export default function CalendarView() {
                 <div className="space-y-2">
                   {/* Actions */}
                   <div className="flex items-center gap-2">
-                    {!day.isSunday && (
-                      <a
-                        href={day.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 dark:text-amber-500 bg-amber-500/10 px-2.5 py-1 rounded-lg hover:bg-amber-500/20 transition-all duration-200"
-                      >
-                        Lire
-                      </a>
-                    )}
-                    <button
-                      onClick={() => setSelectedNoteDate(day.date)}
-                      className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg hover:bg-zinc-150 dark:hover:bg-zinc-800 transition-all duration-200 ${
-                        hasNote 
-                          ? 'bg-amber-500 text-white' 
-                          : 'bg-zinc-100 dark:bg-zinc-850 text-zinc-600 dark:text-zinc-400'
-                      }`}
-                    >
-                      Note
-                    </button>
+                    {!day.isSunday && (() => {
+                      const isFuture = day.date > todayStr;
+                      const isAdmin = user && profile?.role === 'admin';
+                      const locked = isFuture && !isAdmin;
+                      if (locked) return (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-2.5 py-1 rounded-lg cursor-not-allowed opacity-50">
+                          🔒 Non disponible
+                        </span>
+                      );
+                      return contentDates.has(day.date) ? (
+                        <Link
+                          href={`/read/${day.dayNumber}`}
+                          className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 dark:text-amber-500 bg-amber-500/10 px-2.5 py-1 rounded-lg hover:bg-amber-500/20 transition-all duration-200"
+                        >
+                          Lire
+                        </Link>
+                      ) : (
+                        <a
+                          href={day.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 dark:text-amber-500 bg-amber-500/10 px-2.5 py-1 rounded-lg hover:bg-amber-500/20 transition-all duration-200"
+                        >
+                          Lire (AELF)
+                        </a>
+                      );
+                    })()}
+                    {(() => {
+                      const isFuture = day.date > todayStr;
+                      const isAdmin = user && profile?.role === 'admin';
+                      const locked = isFuture && !isAdmin;
+                      return (
+                        <button
+                          onClick={() => !locked && setSelectedNoteDate(day.date)}
+                          disabled={locked}
+                          className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all duration-200 ${
+                            locked ? 'opacity-30 cursor-not-allowed bg-zinc-100 dark:bg-zinc-850 text-zinc-400' :
+                            hasNote 
+                              ? 'bg-amber-500 text-white' 
+                              : 'bg-zinc-100 dark:bg-zinc-850 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-150 dark:hover:bg-zinc-800'
+                          }`}
+                        >
+                          Note
+                        </button>
+                      );
+                    })()}
                   </div>
 
-                  <button
-                    onClick={() => toggleRead(day.date)}
-                    className={`w-full py-1.5 text-[10px] font-bold rounded-lg border transition-all duration-200 flex items-center justify-center gap-1 ${
-                      isRead
-                        ? 'border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800'
-                        : 'border-emerald-600 dark:border-emerald-500 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/20'
-                    }`}
-                  >
-                    {isRead ? 'Fait' : 'Valider'}
-                  </button>
+                  {(() => {
+                    const isFuture = day.date > todayStr;
+                    const isAdmin = user && profile?.role === 'admin';
+                    const locked = isFuture && !isAdmin;
+                    return (
+                      <button
+                        onClick={() => !locked && toggleRead(day.date)}
+                        disabled={locked}
+                        className={`w-full py-1.5 text-[10px] font-bold rounded-lg border transition-all duration-200 flex items-center justify-center gap-1 ${
+                          locked
+                            ? 'opacity-30 cursor-not-allowed border-zinc-200 dark:border-zinc-800 text-zinc-400'
+                            : isRead
+                            ? 'border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                            : 'border-emerald-600 dark:border-emerald-500 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/20'
+                        }`}
+                      >
+                        {locked ? '🔒' : isRead ? 'Fait' : 'Valider'}
+                      </button>
+                    );
+                  })()}
                 </div>
               </div>
             );
@@ -618,32 +669,63 @@ export default function CalendarView() {
 
                         <div className="flex items-center gap-2">
                           {/* Note */}
-                          <button
-                            onClick={() => setSelectedNoteDate(day.date)}
-                            className={`p-2 rounded-lg transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800 ${
-                              hasNote ? 'text-amber-600 dark:text-amber-500' : 'text-zinc-400 dark:text-zinc-500'
-                            }`}
-                            title="Notes"
-                          >
-                            <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                          </button>
+                          {(() => {
+                            const isFuture = day.date > todayStr;
+                            const isAdmin = user && profile?.role === 'admin';
+                            const locked = isFuture && !isAdmin;
+                            return (
+                              <button
+                                onClick={() => !locked && setSelectedNoteDate(day.date)}
+                                disabled={locked}
+                                className={`p-2 rounded-lg transition-colors ${
+                                  locked ? 'opacity-30 cursor-not-allowed text-zinc-300 dark:text-zinc-700' :
+                                  hasNote ? 'text-amber-600 dark:text-amber-500' : 'text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                                }`}
+                                title={locked ? 'Non disponible' : 'Notes'}
+                              >
+                                <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                              </button>
+                            );
+                          })()}
                           
-                          {/* Lire */}
-                          {!day.isSunday && (
-                            <a
-                              href={day.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="p-2 rounded-lg text-zinc-400 dark:text-zinc-500 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                              title="Lire (AELF)"
-                            >
-                              <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                              </svg>
-                            </a>
-                          )}
+                          {/* Lire — conditionnel */}
+                          {!day.isSunday && (() => {
+                            const isFuture = day.date > todayStr;
+                            const isAdmin = user && profile?.role === 'admin';
+                            const locked = isFuture && !isAdmin;
+                            if (locked) return (
+                              <span className="p-2 rounded-lg text-zinc-300 dark:text-zinc-700 opacity-30 cursor-not-allowed" title="Non disponible">
+                                <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                </svg>
+                              </span>
+                            );
+                            return contentDates.has(day.date) ? (
+                              <Link
+                                href={`/read/${day.dayNumber}`}
+                                className="p-2 rounded-lg text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/20 hover:bg-amber-100 dark:hover:bg-amber-950/40 transition-colors"
+                                title="Lire l'enseignement"
+                              >
+                                <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                                </svg>
+                              </Link>
+                            ) : (
+                              <a
+                                href={day.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-2 rounded-lg text-zinc-400 dark:text-zinc-500 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                                title="Lire (AELF)"
+                              >
+                                <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                </svg>
+                              </a>
+                            );
+                          })()}
                         </div>
                       </div>
                     );

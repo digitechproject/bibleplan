@@ -13,6 +13,11 @@ if (!supabaseAnonKey || supabaseAnonKey === 'placeholder-key') {
 
 export const isSupabaseConfigured = true;
 
+if (typeof window !== 'undefined') {
+  console.log("Supabase URL chargée :", supabaseUrl);
+  console.log("Supabase Key chargée :", supabaseAnonKey.slice(0, 10) + "..." + supabaseAnonKey.slice(-10));
+}
+
 // Initialise le client Supabase avec persistance de session active (indispensable pour PWA/Session longue)
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {

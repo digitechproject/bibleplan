@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useReadingPlan } from '../hooks/useReadingPlan';
 import { formatHumanDate } from '../utils/dateUtils';
+import { supabase } from '../utils/supabaseClient';
 import NoteModal from './NoteModal';
 
 interface TodayCardProps {
@@ -15,6 +17,31 @@ export default function TodayCard({ dateStr }: TodayCardProps) {
   const day = getReadingDay(targetDate);
   const note = getDayNote(targetDate);
   const [isNoteOpen, setIsNoteOpen] = useState(false);
+  const [hasCustomContent, setHasCustomContent] = useState(false);
+
+  useEffect(() => {
+    if (!targetDate) return;
+    
+    const checkContent = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('daily_contents')
+          .select('date, audio_url, video_url, teaching_content, teaching_title')
+          .eq('date', targetDate)
+          .single();
+          
+        if (data && (data.audio_url || data.video_url || data.teaching_content || data.teaching_title)) {
+          setHasCustomContent(true);
+        } else {
+          setHasCustomContent(false);
+        }
+      } catch (e) {
+        setHasCustomContent(false);
+      }
+    };
+    
+    checkContent();
+  }, [targetDate]);
 
   if (!isMounted) {
     return (
@@ -82,21 +109,29 @@ export default function TodayCard({ dateStr }: TodayCardProps) {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
-              <a
-                href={day.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => {
-                  // Optionnel : marquer comme lu automatiquement lors de l'ouverture du lien ?
-                  // L'utilisateur préfère généralement décider lui-même, mais c'est bien d'inciter la lecture.
-                }}
-                className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all duration-200"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                </svg>
-                Commencer la lecture (AELF)
-              </a>
+              {hasCustomContent ? (
+                <Link
+                  href={`/read/${day.dayNumber}`}
+                  className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all duration-200"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                  Commencer la lecture
+                </Link>
+              ) : (
+                <a
+                  href={day.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all duration-200"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                  Commencer la lecture (AELF)
+                </a>
+              )}
 
               <button
                 onClick={() => toggleRead(targetDate)}

@@ -76,53 +76,50 @@ export default function AudioPlayer({ src }: AudioPlayerProps) {
   };
 
   return (
-    <div className="w-full bg-gradient-to-r from-amber-50 to-orange-50 dark:from-zinc-900 dark:to-zinc-950 border border-amber-200/50 dark:border-zinc-800/80 p-4 rounded-2xl shadow-sm flex flex-col md:flex-row items-center gap-4 transition-all duration-300">
+    <div className="w-full flex items-center gap-3 transition-all duration-300">
       <audio ref={audioRef} src={src} preload="metadata" />
 
-      {/* Bouton de lecture */}
+      {/* Bouton de lecture compact */}
       <button
         onClick={togglePlay}
-        className="w-12 h-12 flex items-center justify-center rounded-full bg-amber-600 hover:bg-amber-700 text-white shadow-md hover:scale-105 transition-all duration-200"
+        className="w-9 h-9 shrink-0 flex items-center justify-center rounded-full bg-amber-500 hover:bg-amber-600 text-zinc-950 shadow transition-all duration-200"
         aria-label={isPlaying ? 'Pause' : 'Lecture'}
       >
         {isPlaying ? (
-          <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+          <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
             <rect x="6" y="4" width="4" height="16" rx="1" />
             <rect x="14" y="4" width="4" height="16" rx="1" />
           </svg>
         ) : (
-          <svg className="w-5 h-5 fill-current ml-0.5" viewBox="0 0 24 24">
+          <svg className="w-3.5 h-3.5 fill-current ml-0.5" viewBox="0 0 24 24">
             <path d="M8 5v14l11-7z" />
           </svg>
         )}
       </button>
 
-      {/* Barre de contrôle */}
-      <div className="flex-1 w-full space-y-1">
-        <div className="flex justify-between text-[10px] font-bold text-zinc-500 dark:text-zinc-400">
-          <span>Enseignement Audio</span>
-          <span>{formatTime(currentTime)} / {formatTime(duration)}</span>
-        </div>
+      {/* Barre de contrôle horizontale */}
+      <div className="flex-1 min-w-0 flex items-center gap-3">
         <input
           type="range"
           min={0}
           max={duration || 100}
           value={currentTime}
           onChange={handleSeek}
-          className="w-full h-1.5 rounded-lg bg-zinc-200 dark:bg-zinc-800 accent-amber-600 cursor-pointer focus:outline-none"
+          className="flex-1 h-1 rounded-lg bg-zinc-200 dark:bg-zinc-800 accent-amber-500 cursor-pointer focus:outline-none"
         />
+        <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 shrink-0 select-none">
+          {formatTime(currentTime)} / {formatTime(duration)}
+        </span>
       </div>
 
-      {/* Contrôle de vitesse et de volume */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={changeSpeed}
-          className="px-2.5 py-1 rounded bg-amber-100 dark:bg-zinc-800 text-amber-800 dark:text-amber-400 font-bold text-xs hover:bg-amber-200 transition-colors"
-          title="Changer la vitesse de lecture"
-        >
-          {playbackRate}x
-        </button>
-      </div>
+      {/* Contrôle de vitesse compact */}
+      <button
+        onClick={changeSpeed}
+        className="px-2 py-1 rounded bg-zinc-150 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-extrabold text-[10px] hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors shrink-0"
+        title="Vitesse"
+      >
+        {playbackRate}x
+      </button>
     </div>
   );
 }

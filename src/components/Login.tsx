@@ -47,14 +47,14 @@ export default function Login({ onSuccess, onCancel }: LoginProps) {
     setMessage(null);
 
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          shouldCreateUser: true,
-        },
+      const res = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
       });
 
-      if (error) throw error;
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Impossible d'envoyer le code.");
 
       setMessage("Un code de vérification à 6 chiffres a été envoyé à votre adresse e-mail.");
       setStep('otp');
@@ -74,23 +74,23 @@ export default function Login({ onSuccess, onCancel }: LoginProps) {
     setError(null);
 
     try {
-      const { data, error } = await supabase.auth.verifyOtp({
-        email,
-        token: otp.trim(),
-        type: 'email',
+      const res = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, code: otp }),
       });
 
-      if (error) throw error;
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Code de vérification invalide.");
 
-      if (data?.session) {
-        if (onSuccess) onSuccess();
+      if (data.actionLink) {
+        window.location.href = data.actionLink;
       } else {
-        throw new Error("La session n'a pas pu être établie. Veuillez réessayer.");
+        throw new Error("Le lien de connexion n'a pas pu être généré.");
       }
     } catch (err: any) {
       console.error("Erreur lors de la vérification de l'OTP :", err);
       setError(err.message || "Code de vérification invalide. Veuillez réessayer.");
-    } finally {
       setLoading(false);
     }
   };

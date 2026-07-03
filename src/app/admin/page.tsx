@@ -1,394 +1,257 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useReadingPlan } from '@/hooks/useReadingPlan';
 import { supabase } from '@/utils/supabaseClient';
+import { START_DATE_STR, addDays, formatHumanDate } from '@/utils/dateUtils';
 import PageHeader from '@/components/PageHeader';
-import TipTapEditor from '@/components/TipTapEditor';
+import AdminSidebar from '@/components/AdminSidebar';
 
-export default function AdminPage() {
+interface DayStatus {
+  date: string;
+  dayNum: number;
+  title: string | null;
+  hasAudio: boolean;
+  hasVideo: boolean;
+  hasContent: boolean;
+}
+
+export default function AdminDashboardPage() {
+  const router = useRouter();
   const { user, profile, isMounted } = useReadingPlan();
-  
-  // États de saisie
-  const [selectedDate, setSelectedDate] = useState('');
-  const [chapterOverwrite, setChapterOverwrite] = useState('');
-  const [teachingTitle, setTeachingTitle] = useState('');
-  const [teachingContent, setTeachingContent] = useState<any>(null);
-  const [audioUrl, setAudioUrl] = useState('');
-  const [videoUrl, setVideoUrl] = useState('');
-  const [prayer, setPrayer] = useState('');
-  
-  // listes dynamiques (questions et exercices)
-  const [questions, setQuestions] = useState<string[]>(['']);
-  const [exercises, setExercises] = useState<string[]>(['']);
 
-  // États UI
-  const [loading, setLoading] = useState(false);
-  const [uploadingAudio, setUploadingAudio] = useState(false);
-  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [days, setDays] = useState<DayStatus[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({ totalConfigs: 0, audioCount: 0, videoCount: 0 });
 
-  // Définir la date par défaut sur aujourd'hui
   useEffect(() => {
-    if (isMounted) {
-      const today = new Date().toISOString().slice(0, 10);
-      setSelectedDate(today);
+    if (!isMounted || !user) return;
+
+    // Sécurité d'accès admin
+    if (profile?.role !== 'admin') {
+      router.push('/');
+      return;
     }
-  }, [isMounted]);
 
-  // Charger le contenu existant pour la date sélectionnée
-  useEffect(() => {
-    if (!selectedDate || !user) return;
-    
-    const fetchDailyContent = async () => {
-      setLoading(true);
+    const fetchAllDaysStatus = async () => {
       try {
-        const { data, error } = await supabase
+        // 1. Récupérer tous les daily_contents configurés
+        const { data: contents, error } = await supabase
           .from('daily_contents')
-          .select('*')
-          .eq('date', selectedDate)
-          .single();
+          .select('date, teaching_title, audio_url, video_url, teaching_content');
 
-        if (error && error.code !== 'PGRST116') throw error; // PGRST116 = aucun enregistrement trouvé
+        if (error) throw error;
 
-        if (data) {
-          setChapterOverwrite(data.chapter_overwrite || '');
-          setTeachingTitle(data.teaching_title || '');
-          setTeachingContent(data.teaching_content || null);
-          setAudioUrl(data.audio_url || '');
-          setVideoUrl(data.video_url || '');
-          setPrayer(data.prayer || '');
-          setQuestions(data.reflection_questions && data.reflection_questions.length > 0 ? data.reflection_questions : ['']);
-          setExercises(data.practical_exercises && data.practical_exercises.length > 0 ? data.practical_exercises : ['']);
-        } else {
-          // Réinitialiser le formulaire
-          setChapterOverwrite('');
-          setTeachingTitle('');
-          setTeachingContent(null);
-          setAudioUrl('');
-          setVideoUrl('');
-          setPrayer('');
-          setQuestions(['']);
-          setExercises(['']);
+        // 2. Générer la liste des 365 jours de lecture
+        const daysList: DayStatus[] = [];
+        let configured = 0;
+        let audios = 0;
+        let videos = 0;
+
+        for (let i = 1; i <= 365; i++) {
+          const dayIndex = i - 1;
+          const weekIndex = Math.floor(dayIndex / 6) + 1;
+          const dayOfWeek = dayIndex % 6;
+          const daysOffset = (weekIndex - 1) * 7 + dayOfWeek;
+          const dateStr = addDays(START_DATE_STR, daysOffset);
+
+          // Chercher le contenu Supabase correspondant
+          const content = contents?.find(c => c.date === dateStr);
+
+          const hasAudio = !!content?.audio_url;
+          const hasVideo = !!content?.video_url;
+          const hasContent = !!content?.teaching_content;
+
+          if (content) {
+            configured++;
+            if (hasAudio) audios++;
+            if (hasVideo) videos++;
+          }
+
+          daysList.push({
+            date: dateStr,
+            dayNum: i,
+            title: content?.teaching_title || null,
+            hasAudio,
+            hasVideo,
+            hasContent,
+          });
         }
-      } catch (err: any) {
-        console.error("Erreur de chargement du contenu :", err);
+
+        setDays(daysList);
+        setStats({ totalConfigs: configured, audioCount: audios, videoCount: videos });
+      } catch (err) {
+        console.error("Erreur de chargement du dashboard admin :", err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchDailyContent();
-  }, [selectedDate, user]);
+    fetchAllDaysStatus();
+  }, [isMounted, user, profile, router]);
 
-  const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Filtrer les jours selon la recherche (recherche par numéro de jour ou titre)
+  const filteredDays = days.filter(
+    (d) =>
+      d.dayNum.toString().includes(searchQuery) ||
+      (d.title && d.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      d.date.includes(searchQuery)
+  );
 
-    setUploadingAudio(true);
-    setStatusMessage(null);
-
-    try {
-      // 1. Demander une URL de dépôt présignée à notre API Route
-      const res = await fetch('/api/upload/presign', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename: file.name, contentType: file.type }),
-      });
-
-      if (!res.ok) throw new Error("Impossible de générer l'URL d'upload R2");
-
-      const { uploadUrl, publicUrl } = await res.json();
-
-      // 2. Uploader le fichier directement vers Cloudflare R2
-      const uploadRes = await fetch(uploadUrl, {
-        method: 'PUT',
-        body: file,
-        headers: { 'Content-Type': file.type },
-      });
-
-      if (!uploadRes.ok) throw new Error("Échec du téléversement vers Cloudflare R2");
-
-      setAudioUrl(publicUrl);
-      setStatusMessage({ type: 'success', text: 'Fichier audio téléversé avec succès vers Cloudflare R2 !' });
-    } catch (err: any) {
-      console.error("Erreur d'upload :", err);
-      setStatusMessage({ type: 'error', text: err.message || "Erreur lors du téléversement audio." });
-    } finally {
-      setUploadingAudio(false);
-    }
-  };
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedDate) return;
-
-    setLoading(true);
-    setStatusMessage(null);
-
-    try {
-      // Filtrer les questions et exercices vides
-      const cleanQuestions = questions.filter(q => q.trim() !== '');
-      const cleanExercises = exercises.filter(ex => ex.trim() !== '');
-
-      const { error } = await supabase.from('daily_contents').upsert({
-        date: selectedDate,
-        chapter_overwrite: chapterOverwrite || null,
-        teaching_title: teachingTitle || null,
-        teaching_content: teachingContent,
-        audio_url: audioUrl || null,
-        video_url: videoUrl || null,
-        prayer: prayer || null,
-        reflection_questions: cleanQuestions,
-        practical_exercises: cleanExercises,
-        updated_at: new Date().toISOString()
-      });
-
-      if (error) throw error;
-
-      setStatusMessage({ type: 'success', text: `Contenu du ${selectedDate} enregistré et publié avec succès !` });
-    } catch (err: any) {
-      console.error("Erreur d'enregistrement :", err);
-      setStatusMessage({ type: 'error', text: err.message || "Erreur lors de la publication." });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Gestionnaires de listes dynamiques
-  const addQuestion = () => setQuestions([...questions, '']);
-  const removeQuestion = (idx: number) => setQuestions(questions.filter((_, i) => i !== idx));
-  const updateQuestion = (idx: number, val: string) => {
-    const updated = [...questions];
-    updated[idx] = val;
-    setQuestions(updated);
-  };
-
-  const addExercise = () => setExercises([...exercises, '']);
-  const removeExercise = (idx: number) => setExercises(exercises.filter((_, i) => i !== idx));
-  const updateExercise = (idx: number, val: string) => {
-    const updated = [...exercises];
-    updated[idx] = val;
-    setExercises(updated);
-  };
-
-  // Sécurité d'accès admin
-  if (!isMounted) return null;
-  if (!user || profile?.role !== 'admin') {
+  if (!isMounted || loading) {
     return (
-      <div className="max-w-md mx-auto py-12 text-center space-y-4">
-        <svg className="w-12 h-12 mx-auto text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-        </svg>
-        <h2 className="text-xl font-extrabold text-zinc-900 dark:text-zinc-50">Accès Refusé</h2>
-        <p className="text-sm text-zinc-500">Vous devez être connecté en tant que responsable/administrateur pour accéder à cette interface.</p>
+      <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
+        <div className="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-sm font-bold text-zinc-500">Chargement du dashboard...</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 pb-16">
-      <PageHeader 
-        title="Espace Enseignant & Administration" 
-        subtitle="Rédigez les enseignements, uploadez des audios R2 et configurez les vidéos d'accompagnement." 
-      />
+    <div className="flex bg-zinc-50 dark:bg-zinc-950 min-h-screen">
+      {/* Sidebar de navigation */}
+      <AdminSidebar />
 
-      {statusMessage && (
-        <div className={`p-4 rounded-xl border text-sm font-semibold ${
-          statusMessage.type === 'success' 
-            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-400' 
-            : 'bg-red-500/10 border-red-500/20 text-red-700 dark:text-red-400'
-        }`}>
-          {statusMessage.text}
+      {/* Contenu principal */}
+      <main className="flex-1 p-8 space-y-8 max-w-5xl overflow-y-auto">
+        <div className="pb-4 border-b border-zinc-200 dark:border-zinc-800">
+          <PageHeader 
+            title="Espace Enseignant & Administration" 
+            subtitle="Gérez le plan de lecture de 1 an, rédigez les enseignements, uploadez les MP3 vers R2." 
+          />
         </div>
-      )}
 
-      <form onSubmit={handleSave} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        {/* Colonne Gauche & Milieu : Édition enseignement */}
-        <div className="lg:col-span-2 space-y-6 bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Sélection date */}
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Date de publication</label>
-              <input
-                type="date"
-                required
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
-              />
+        {/* Bloc Statistiques SaaS */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Jours configurés</p>
+              <h3 className="text-2xl font-extrabold text-zinc-900 dark:text-zinc-50 mt-1">{stats.totalConfigs} / 365</h3>
             </div>
-
-            {/* Surcharger chapitre */}
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Surcharger le chapitre (optionnel)</label>
-              <input
-                type="text"
-                value={chapterOverwrite}
-                onChange={(e) => setChapterOverwrite(e.target.value)}
-                placeholder="Ex: Matthieu 1:1-17 (si différent du calendrier)"
-                className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
-              />
+            <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-500 flex items-center justify-center">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
             </div>
           </div>
 
-          {/* Titre enseignement */}
-          <div className="space-y-1">
-            <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Titre de l'enseignement</label>
-            <input
-              type="text"
-              value={teachingTitle}
-              onChange={(e) => setTeachingTitle(e.target.value)}
-              placeholder="Entrez le titre inspirant de la journée..."
-              className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 font-bold"
-            />
+          <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Audios hébergés R2</p>
+              <h3 className="text-2xl font-extrabold text-zinc-900 dark:text-zinc-50 mt-1">{stats.audioCount} MP3</h3>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 flex items-center justify-center">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+              </svg>
+            </div>
           </div>
 
-          {/* Corps de l'enseignement (TipTap) */}
-          <div className="space-y-1">
-            <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block mb-1">Corps de l'enseignement (TipTap Editor)</label>
-            <TipTapEditor content={teachingContent} onChange={setTeachingContent} />
-          </div>
-
-          {/* Prière du jour */}
-          <div className="space-y-1">
-            <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Prière du jour</label>
-            <textarea
-              rows={3}
-              value={prayer}
-              onChange={(e) => setPrayer(e.target.value)}
-              placeholder="Rédigez une prière de méditation..."
-              className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
-            />
+          <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Vidéos YouTube</p>
+              <h3 className="text-2xl font-extrabold text-zinc-900 dark:text-zinc-50 mt-1">{stats.videoCount} Liens</h3>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-red-500/10 text-red-600 dark:text-red-500 flex items-center justify-center">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            </div>
           </div>
         </div>
 
-        {/* Colonne Droite : Ressources Média & Questions */}
-        <div className="space-y-6">
-          
-          {/* Média (Audio R2 & Vidéo YouTube) */}
-          <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 border-b pb-2">Ressources Médias</h3>
-            
-            {/* Audio Cloudflare R2 */}
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">Fichier Audio (MP3)</label>
-              <input
-                type="file"
-                accept="audio/mpeg"
-                onChange={handleAudioUpload}
-                disabled={uploadingAudio}
-                className="w-full text-xs text-zinc-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100 cursor-pointer"
-              />
-              {uploadingAudio && <p className="text-[10px] text-amber-600 animate-pulse font-medium">Téléversement du MP3 sur Cloudflare R2 en cours...</p>}
+        {/* Section de gestion des Jours */}
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+          {/* Header de Recherche */}
+          <div className="p-6 border-b border-zinc-150 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">Liste des Jours du Plan</h3>
+            <div className="relative max-w-xs w-full">
               <input
                 type="text"
-                value={audioUrl}
-                onChange={(e) => setAudioUrl(e.target.value)}
-                placeholder="Lien audio ou R2 public..."
-                className="w-full px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                placeholder="Rechercher (ex: 9, Luc 1, 2026)..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
               />
-            </div>
-
-            {/* Vidéo YouTube */}
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Lien de la Vidéo YouTube</label>
-              <input
-                type="text"
-                value={videoUrl}
-                onChange={(e) => setVideoUrl(e.target.value)}
-                placeholder="https://www.youtube.com/watch?v=..."
-                className="w-full px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
-              />
+              <svg className="w-4 h-4 text-zinc-400 absolute left-3 top-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
             </div>
           </div>
 
-          {/* Questions de réflexion */}
-          <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4">
-            <div className="flex justify-between items-center border-b pb-2">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Questions de réflexion</h3>
-              <button
-                type="button"
-                onClick={addQuestion}
-                className="text-[10px] text-amber-600 hover:underline font-bold"
-              >
-                + Ajouter
-              </button>
-            </div>
-            
-            <div className="space-y-2">
-              {questions.map((q, idx) => (
-                <div key={idx} className="flex gap-2 items-center">
-                  <input
-                    type="text"
-                    value={q}
-                    onChange={(e) => updateQuestion(idx, e.target.value)}
-                    placeholder={`Question ${idx + 1}`}
-                    className="flex-1 px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
-                  />
-                  {questions.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeQuestion(idx)}
-                      className="text-red-500 text-xs hover:text-red-700"
-                    >
-                      Suppr
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
+          {/* Tableau des jours */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-zinc-150 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
+                  <th className="px-6 py-4">Jour</th>
+                  <th className="px-6 py-4">Date de lecture</th>
+                  <th className="px-6 py-4">Enseignement Titre</th>
+                  <th className="px-6 py-4">Contenus configurés</th>
+                  <th className="px-6 py-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-150 dark:divide-zinc-800 text-xs">
+                {filteredDays.length > 0 ? (
+                  filteredDays.slice(0, 50).map((d) => (
+                    <tr key={d.dayNum} className="hover:bg-zinc-50/40 dark:hover:bg-zinc-900/10 transition-colors">
+                      <td className="px-6 py-4 font-bold text-zinc-900 dark:text-zinc-100">
+                        Jour {d.dayNum}
+                      </td>
+                      <td className="px-6 py-4 text-zinc-550 dark:text-zinc-400">
+                        {formatHumanDate(d.date)}
+                      </td>
+                      <td className="px-6 py-4 font-semibold">
+                        {d.title ? (
+                          <span className="text-zinc-800 dark:text-zinc-200">{d.title}</span>
+                        ) : (
+                          <span className="text-zinc-400 italic">Aucun titre défini</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center space-x-1.5">
+                          {d.hasContent ? (
+                            <span className="px-2 py-0.5 bg-amber-500/10 text-amber-700 dark:text-amber-400 rounded text-[9px] font-bold">Écrit</span>
+                          ) : (
+                            <span className="px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 rounded text-[9px] font-semibold">Vide</span>
+                          )}
+                          {d.hasAudio && (
+                            <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 rounded text-[9px] font-bold">Audio</span>
+                          )}
+                          {d.hasVideo && (
+                            <span className="px-2 py-0.5 bg-red-500/10 text-red-700 dark:text-red-400 rounded text-[9px] font-bold">Vidéo</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <button
+                          onClick={() => router.push(`/admin/edit/${d.dayNum}`)}
+                          className="px-3 py-1.5 bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-250 text-white dark:text-zinc-950 font-bold rounded-lg text-[10px] transition-colors"
+                        >
+                          Éditer
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-8 text-center text-zinc-400 font-bold">
+                      Aucun jour ne correspond à votre recherche.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
-
-          {/* Exercices pratiques */}
-          <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4">
-            <div className="flex justify-between items-center border-b pb-2">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Exercices pratiques</h3>
-              <button
-                type="button"
-                onClick={addExercise}
-                className="text-[10px] text-amber-600 hover:underline font-bold"
-              >
-                + Ajouter
-              </button>
+          {filteredDays.length > 50 && (
+            <div className="p-4 bg-zinc-50/50 dark:bg-zinc-900/20 text-center border-t border-zinc-100 dark:border-zinc-800 text-[10px] text-zinc-400 font-bold">
+              Affichage des 50 premiers résultats (sur {filteredDays.length}). Affinez votre recherche si besoin.
             </div>
-            
-            <div className="space-y-2">
-              {exercises.map((ex, idx) => (
-                <div key={idx} className="flex gap-2 items-center">
-                  <input
-                    type="text"
-                    value={ex}
-                    onChange={(e) => updateExercise(idx, e.target.value)}
-                    placeholder={`Exercice ${idx + 1}`}
-                    className="flex-1 px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
-                  />
-                  {exercises.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeExercise(idx)}
-                      className="text-red-500 text-xs hover:text-red-700"
-                    >
-                      Suppr
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Bouton de sauvegarde global */}
-          <button
-            type="submit"
-            disabled={loading || uploadingAudio}
-            className="w-full py-4 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2"
-          >
-            {loading ? "Enregistrement en cours..." : "Publier la journée"}
-          </button>
-
+          )}
         </div>
-      </form>
+      </main>
     </div>
   );
 }
