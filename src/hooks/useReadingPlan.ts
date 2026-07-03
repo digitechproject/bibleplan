@@ -6,7 +6,7 @@ import { formatDate } from '../utils/dateUtils';
 import { ReadingDay, DayNote } from '../types';
 
 export function useReadingPlan() {
-  const { readDates, notes, toggleRead, saveNote, stats, isMounted, theme, toggleTheme } = useReadingPlanContext();
+  const { readDates, notes, toggleRead, saveNote, stats, isMounted, theme, toggleTheme, user, profile, signOut } = useReadingPlanContext();
 
   const getTodayStr = (): string => {
     return formatDate(new Date());
@@ -72,6 +72,9 @@ export function useReadingPlan() {
     saveNote,
     isRead,
     theme,
-    toggleTheme
+    toggleTheme,
+    user,
+    profile,
+    signOut
   };
 }

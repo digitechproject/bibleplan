@@ -1,13 +1,15 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useReadingPlan } from '../hooks/useReadingPlan';
+import Login from './Login';
 
 export default function Navigation() {
   const pathname = usePathname();
-  const { theme, toggleTheme, isMounted } = useReadingPlan();
+  const { theme, toggleTheme, isMounted, user, signOut } = useReadingPlan();
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
 
   const navItems = [
     {
@@ -92,21 +94,48 @@ export default function Navigation() {
 
           <div className="flex items-center gap-4">
             {isMounted && (
-              <button
-                onClick={toggleTheme}
-                className="p-2 rounded-lg text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900 hover:text-zinc-800 dark:hover:text-zinc-200 transition-all duration-200"
-                aria-label="Changer de thème"
-              >
-                {theme === 'dark' ? (
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.364 17.636l-.707.707M6.364 6.364l-.707-.707M17.364 17.636l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
-                  </svg>
+              <>
+                {user ? (
+                  <div className="flex items-center gap-3">
+                    <span className="hidden lg:inline text-xs text-zinc-500 truncate max-w-[150px]" title={user.email}>
+                      {user.email}
+                    </span>
+                    <button
+                      onClick={() => {
+                        if (confirm('Voulez-vous vous déconnecter ?')) {
+                          signOut();
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-655 hover:bg-zinc-50 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-zinc-100 text-xs font-semibold transition-all duration-200"
+                    >
+                      Déconnexion
+                    </button>
+                  </div>
                 ) : (
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                  </svg>
+                  <button
+                    onClick={() => setIsLoginOpen(true)}
+                    className="px-3.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-all duration-200 shadow-sm"
+                  >
+                    Connexion
+                  </button>
                 )}
-              </button>
+
+                <button
+                  onClick={toggleTheme}
+                  className="p-2 rounded-lg text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900 hover:text-zinc-800 dark:hover:text-zinc-200 transition-all duration-200"
+                  aria-label="Changer de thème"
+                >
+                  {theme === 'dark' ? (
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.364 17.636l-.707.707M6.364 6.364l-.707-.707M17.364 17.636l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                    </svg>
+                  )}
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -131,7 +160,53 @@ export default function Navigation() {
             </Link>
           );
         })}
+
+        {/* Item de compte Mobile */}
+        <button
+          onClick={() => {
+            if (user) {
+              if (confirm(`Connecté en tant que ${user.email}. Voulez-vous vous déconnecter ?`)) {
+                signOut();
+              }
+            } else {
+              setIsLoginOpen(true);
+            }
+          }}
+          className={`flex flex-col items-center justify-center flex-1 py-1 transition-all duration-200 ${
+            user
+              ? 'text-emerald-600 dark:text-emerald-500'
+              : 'text-zinc-500 dark:text-zinc-550 hover:text-zinc-900 dark:hover:text-zinc-100'
+          }`}
+        >
+          <div className="mb-0.5">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          </div>
+          <span className="text-[10px] tracking-wide">{user ? 'Profil' : 'Connexion'}</span>
+        </button>
       </nav>
+
+      {/* Modale de Connexion */}
+      {isLoginOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-sm">
+          <div className="w-full max-w-md relative animate-in fade-in zoom-in-95 duration-200">
+            <button
+              onClick={() => setIsLoginOpen(false)}
+              className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-650 dark:hover:text-zinc-200 z-10 p-1"
+              aria-label="Fermer"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <Login 
+              onSuccess={() => setIsLoginOpen(false)} 
+              onCancel={() => setIsLoginOpen(false)} 
+            />
+          </div>
+        </div>
+      )}
     </>
   );
 }

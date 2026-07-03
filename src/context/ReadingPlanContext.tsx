@@ -1,6 +1,8 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { User } from '@supabase/supabase-js';
+import { supabase } from '../utils/supabaseClient';
 import { BIBLE_BOOKS, BibleBook } from '../data/bibleData';
 import { ReadingDay, DayNote, BibleStats } from '../types';
 import { getReadingForDate } from '../utils/bibleUtils';
@@ -14,6 +16,9 @@ interface ReadingPlanContextType {
   isMounted: boolean; // Pour éviter les problèmes d'hydratation Next.js avec LocalStorage
   theme: 'light' | 'dark';
   toggleTheme: () => void;
+  user: User | null;
+  profile: { role: string } | null;
+  signOut: () => Promise<void>;
 }
 
 const ReadingPlanContext = createContext<ReadingPlanContextType | undefined>(undefined);
@@ -23,6 +28,54 @@ export function ReadingPlanProvider({ children }: { children: React.ReactNode })
   const [notes, setNotes] = useState<Record<string, DayNote>>({});
   const [isMounted, setIsMounted] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<{ role: string } | null>(null);
+
+  // Suivre la session utilisateur Supabase
+  useEffect(() => {
+    // Session initiale
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchProfile(session.user.id);
+      }
+    });
+
+    // Écouter les changements d'auth
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchProfile(session.user.id);
+      } else {
+        setProfile(null);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const fetchProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .single();
+      
+      if (error) throw error;
+      setProfile(data);
+    } catch (e) {
+      console.error("Erreur lors de la récupération du profil :", e);
+    }
+  };
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setProfile(null);
+  };
 
   // Charger les données depuis LocalStorage au montage
   useEffect(() => {
@@ -183,7 +236,7 @@ export function ReadingPlanProvider({ children }: { children: React.ReactNode })
   const stats = calculateStats();
 
   return (
-    <ReadingPlanContext.Provider value={{ readDates, notes, toggleRead, saveNote, stats, isMounted, theme, toggleTheme }}>
+    <ReadingPlanContext.Provider value={{ readDates, notes, toggleRead, saveNote, stats, isMounted, theme, toggleTheme, user, profile, signOut }}>
       {children}
     </ReadingPlanContext.Provider>
   );
