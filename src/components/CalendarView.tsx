@@ -396,59 +396,61 @@ export default function CalendarView() {
                   </div>
 
                   {/* Actions de pied de cellule */}
-                  <div className="hidden sm:flex items-center justify-between pt-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200">
-                    <div className="flex gap-1">
-                      {/* Note */}
+                  {!isLocked && (
+                    <div className="hidden sm:flex items-center justify-between pt-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200">
+                      <div className="flex gap-1">
+                        {/* Note */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedNoteDate(day.date);
+                          }}
+                          className={`p-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors ${
+                            hasNote ? 'text-amber-600 dark:text-amber-500' : 'text-zinc-400'
+                          }`}
+                          title="Notes de méditation"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+
+                        {/* Lien externe (uniquement lecture) */}
+                        {!day.isSunday && (
+                          <a
+                            href={day.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="p-1 rounded text-zinc-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                            title="Lire le chapitre (AELF)"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                          </a>
+                        )}
+                      </div>
+
+                      {/* Statut check */}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          setSelectedNoteDate(day.date);
+                          toggleRead(day.date);
                         }}
-                        className={`p-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors ${
-                          hasNote ? 'text-amber-600 dark:text-amber-500' : 'text-zinc-400'
+                        className={`p-1 rounded transition-colors ${
+                          day.status === 'read'
+                            ? 'text-emerald-600 dark:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/20'
+                            : 'text-zinc-300 dark:text-zinc-700 hover:text-emerald-600'
                         }`}
-                        title="Notes de méditation"
+                        title={day.status === 'read' ? 'Marquer non lu' : 'Marquer lu'}
                       >
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                         </svg>
                       </button>
-
-                      {/* Lien externe (uniquement lecture) */}
-                      {!day.isSunday && (
-                        <a
-                          href={day.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="p-1 rounded text-zinc-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                          title="Lire le chapitre (AELF)"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                          </svg>
-                        </a>
-                      )}
                     </div>
-
-                    {/* Statut check */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleRead(day.date);
-                      }}
-                      className={`p-1 rounded transition-colors ${
-                        day.status === 'read'
-                          ? 'text-emerald-600 dark:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/20'
-                          : 'text-zinc-300 dark:text-zinc-700 hover:text-emerald-600'
-                      }`}
-                      title={day.status === 'read' ? 'Marquer non lu' : 'Marquer lu'}
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                    </button>
-                  </div>
+                  )}
 
                   {/* Indicateur de note discret si masqué */}
                   {hasNote && (

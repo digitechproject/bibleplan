@@ -12,12 +12,13 @@ interface TodayCardProps {
 }
 
 export default function TodayCard({ dateStr }: TodayCardProps) {
-  const { getReadingDay, toggleRead, isMounted, getDayNote, todayStr } = useReadingPlan();
+  const { getReadingDay, toggleRead, isMounted, getDayNote, todayStr, user, profile } = useReadingPlan();
   const targetDate = dateStr || todayStr;
   const day = getReadingDay(targetDate);
   const note = getDayNote(targetDate);
   const [isNoteOpen, setIsNoteOpen] = useState(false);
   const [hasCustomContent, setHasCustomContent] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!targetDate) return;
@@ -55,6 +56,10 @@ export default function TodayCard({ dateStr }: TodayCardProps) {
 
   const isRead = day.status === 'read';
   const hasNote = note && (note.summary || note.verses || note.prayer || note.decision || note.application);
+
+  const isAdmin = user && profile?.role === 'admin';
+  const isFuture = targetDate > todayStr;
+  const isLocked = isFuture && !isAdmin;
 
   return (
     <div className={`w-full overflow-hidden border rounded-2xl transition-all duration-300 shadow-lg ${
@@ -109,7 +114,11 @@ export default function TodayCard({ dateStr }: TodayCardProps) {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
-              {hasCustomContent ? (
+              {isLocked ? (
+                <span className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 font-semibold text-sm cursor-not-allowed border border-zinc-200 dark:border-zinc-700">
+                  🔒 Lecture non disponible (Jour futur)
+                </span>
+              ) : hasCustomContent ? (
                 <Link
                   href={`/read/${day.dayNumber}`}
                   className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all duration-200"
@@ -134,14 +143,21 @@ export default function TodayCard({ dateStr }: TodayCardProps) {
               )}
 
               <button
-                onClick={() => toggleRead(targetDate)}
+                onClick={() => !isLocked && toggleRead(targetDate)}
+                disabled={isLocked}
                 className={`flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm border transition-all duration-200 ${
-                  isRead
+                  isLocked
+                    ? 'opacity-40 cursor-not-allowed border-zinc-200 dark:border-zinc-800 text-zinc-450 dark:text-zinc-555'
+                    : isRead
                     ? 'border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
                     : 'border-emerald-600 dark:border-emerald-500 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/20'
                 }`}
               >
-                {isRead ? (
+                {isLocked ? (
+                  <>
+                    <span>🔒 Indisponible</span>
+                  </>
+                ) : isRead ? (
                   <>
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -169,7 +185,7 @@ export default function TodayCard({ dateStr }: TodayCardProps) {
               <h3 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 mt-1">
                 Récapitulatif de la semaine
               </h3>
-              <p className="text-xs text-zinc-500 mt-1">
+              <p className="text-xs text-zinc-550 mt-1">
                 Aujourd'hui, pas de nouveau chapitre. Prenez le temps de relire et méditer sur les six chapitres lus cette semaine.
               </p>
             </div>
@@ -190,14 +206,17 @@ export default function TodayCard({ dateStr }: TodayCardProps) {
 
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
               <button
-                onClick={() => toggleRead(targetDate)}
+                onClick={() => !isLocked && toggleRead(targetDate)}
+                disabled={isLocked}
                 className={`flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm border transition-all duration-200 ${
-                  isRead
+                  isLocked
+                    ? 'opacity-40 cursor-not-allowed border-zinc-200 dark:border-zinc-800 text-zinc-450 dark:text-zinc-555'
+                    : isRead
                     ? 'border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
                     : 'border-amber-600 dark:border-amber-500 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/20'
                 }`}
               >
-                {isRead ? 'Marquer la révision comme non faite' : 'Marquer la révision comme complétée'}
+                {isLocked ? '🔒 Indisponible' : isRead ? 'Marquer la révision comme non faite' : 'Marquer la révision comme complétée'}
               </button>
             </div>
           </div>
@@ -206,13 +225,18 @@ export default function TodayCard({ dateStr }: TodayCardProps) {
         {/* Bouton de Notes et Aperçu */}
         <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between">
           <button
-            onClick={() => setIsNoteOpen(true)}
-            className="inline-flex items-center gap-2 text-sm font-semibold text-amber-700 dark:text-amber-500 hover:text-amber-800 dark:hover:text-amber-400 transition-all duration-200"
+            onClick={() => !isLocked && setIsNoteOpen(true)}
+            disabled={isLocked}
+            className={`inline-flex items-center gap-2 text-sm font-semibold transition-all duration-200 ${
+              isLocked
+                ? 'opacity-40 cursor-not-allowed text-zinc-400 dark:text-zinc-500'
+                : 'text-amber-700 dark:text-amber-500 hover:text-amber-800 dark:hover:text-amber-400'
+            }`}
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
             </svg>
-            {hasNote ? 'Modifier ma note' : 'Ajouter une note de méditation'}
+            {isLocked ? 'Note verrouillée' : hasNote ? 'Modifier ma note' : 'Ajouter une note de méditation'}
           </button>
 
           {hasNote && (
