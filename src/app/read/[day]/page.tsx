@@ -217,6 +217,14 @@ export default function ReadingDayPage() {
         <p className="text-xs text-zinc-550 font-bold">{formatHumanDate(dateStr)}</p>
       </div>
 
+      {/* Intégration YouTube */}
+      {content?.video_url && (
+        <div className="space-y-3 pt-2">
+          <h3 className="text-xs font-extrabold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 text-center">Vidéo d'accompagnement</h3>
+          <YouTubePlayer url={content.video_url} />
+        </div>
+      )}
+
       {/* Corps de l'enseignement (Style Blog épuré) */}
       {content?.teaching_title ? (
         <div className="space-y-6">
@@ -240,13 +248,7 @@ export default function ReadingDayPage() {
         </div>
       )}
 
-      {/* Intégration YouTube */}
-      {content?.video_url && (
-        <div className="space-y-3 pt-4">
-          <h3 className="text-xs font-extrabold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Vidéo d'accompagnement</h3>
-          <YouTubePlayer url={content.video_url} />
-        </div>
-      )}
+
 
       {/* Questions / Exercices (Épuré) */}
       {((content?.reflection_questions && content.reflection_questions.length > 0) || 
