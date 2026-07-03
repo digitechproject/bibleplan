@@ -77,6 +77,100 @@ export function ReadingPlanProvider({ children }: { children: React.ReactNode })
     setProfile(null);
   };
 
+  const syncWithSupabase = async (userId: string) => {
+    try {
+      // 1. Synchroniser la progression
+      const { data: dbProgress, error: progressError } = await supabase
+        .from('user_progress')
+        .select('date')
+        .eq('user_id', userId);
+
+      if (progressError) throw progressError;
+
+      const dbDates = dbProgress.map(p => p.date);
+      // Fusionner : toutes les dates locales et distantes
+      const mergedDates = Array.from(new Set([...readDates, ...dbDates]));
+      
+      // Mettre à jour l'état et le stockage local
+      setReadDates(mergedDates);
+      localStorage.setItem('sofitar_read_dates', JSON.stringify(mergedDates));
+
+      // Sauvegarder les nouvelles dates locales en base de données
+      const datesToInsert = readDates.filter(d => !dbDates.includes(d));
+      if (datesToInsert.length > 0) {
+        const rows = datesToInsert.map(date => ({ user_id: userId, date }));
+        await supabase.from('user_progress').insert(rows);
+      }
+
+      // 2. Synchroniser les notes
+      const { data: dbNotes, error: notesError } = await supabase
+        .from('user_notes')
+        .select('*')
+        .eq('user_id', userId);
+
+      if (notesError) throw notesError;
+
+      const mergedNotes = { ...notes };
+      const notesToUpsert: any[] = [];
+
+      // Intégrer les notes distantes
+      dbNotes.forEach(dbN => {
+        const localN = notes[dbN.date];
+        // Si la note distante est plus récente ou qu'on n'a pas de note locale
+        if (!localN || new Date(dbN.updated_at) > new Date(localN.updatedAt)) {
+          mergedNotes[dbN.date] = {
+            date: dbN.date,
+            summary: dbN.summary || '',
+            verses: dbN.verses || '',
+            prayer: dbN.prayer || '',
+            decision: dbN.decision || '',
+            application: dbN.application || '',
+            updatedAt: dbN.updated_at
+          };
+        }
+      });
+
+      // Trouver les notes locales à envoyer sur Supabase
+      Object.keys(notes).forEach(date => {
+        const localN = notes[date];
+        const dbN = dbNotes.find(n => n.date === date);
+        if (!dbN || new Date(localN.updatedAt) > new Date(dbN.updated_at)) {
+          notesToUpsert.push({
+            user_id: userId,
+            date: localN.date,
+            summary: localN.summary,
+            verses: localN.verses,
+            prayer: localN.prayer,
+            decision: localN.decision,
+            application: localN.application,
+            updated_at: localN.updatedAt
+          });
+        }
+      });
+
+      // Mettre à jour l'état et le stockage local
+      setNotes(mergedNotes);
+      localStorage.setItem('sofitar_notes', JSON.stringify(mergedNotes));
+
+      // Sauvegarder sur Supabase
+      if (notesToUpsert.length > 0) {
+        await supabase.from('user_notes').upsert(notesToUpsert);
+      }
+
+    } catch (e) {
+      console.error("Erreur lors de la synchronisation Supabase :", e);
+    }
+  };
+
+  // Synchroniser à la connexion
+  useEffect(() => {
+    if (!isMounted) return;
+    
+    if (user) {
+      syncWithSupabase(user.id);
+    }
+  }, [user, isMounted]);
+
   // Charger les données depuis LocalStorage au montage
   useEffect(() => {
     try {
@@ -137,18 +231,34 @@ export function ReadingPlanProvider({ children }: { children: React.ReactNode })
     }
   };
 
-  const toggleRead = (dateStr: string) => {
+  const toggleRead = async (dateStr: string) => {
     let newDates: string[];
-    if (readDates.includes(dateStr)) {
-      newDates = readDates.filter(d => d !== dateStr);
-    } else {
+    const isAdding = !readDates.includes(dateStr);
+    
+    if (isAdding) {
       newDates = [...readDates, dateStr];
+    } else {
+      newDates = readDates.filter(d => d !== dateStr);
     }
+    
     setReadDates(newDates);
     saveReadDatesToStorage(newDates);
+
+    // Écriture Supabase si connecté
+    if (user) {
+      try {
+        if (isAdding) {
+          await supabase.from('user_progress').insert({ user_id: user.id, date: dateStr });
+        } else {
+          await supabase.from('user_progress').delete().eq('user_id', user.id).eq('date', dateStr);
+        }
+      } catch (e) {
+        console.error("Erreur d'écriture de progression sur Supabase :", e);
+      }
+    }
   };
 
-  const saveNote = (dateStr: string, noteData: Partial<DayNote>) => {
+  const saveNote = async (dateStr: string, noteData: Partial<DayNote>) => {
     const defaultNote: DayNote = {
       date: dateStr,
       summary: '',
@@ -174,6 +284,24 @@ export function ReadingPlanProvider({ children }: { children: React.ReactNode })
 
     setNotes(newNotes);
     saveNotesToStorage(newNotes);
+
+    // Écriture Supabase si connecté
+    if (user) {
+      try {
+        await supabase.from('user_notes').upsert({
+          user_id: user.id,
+          date: dateStr,
+          summary: updatedNote.summary,
+          verses: updatedNote.verses,
+          prayer: updatedNote.prayer,
+          decision: updatedNote.decision,
+          application: updatedNote.application,
+          updated_at: updatedNote.updatedAt
+        });
+      } catch (e) {
+        console.error("Erreur d'écriture de note sur Supabase :", e);
+      }
+    }
   };
 
   // Calculer les statistiques de lecture (chapitres uniques lus)

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useReadingPlan } from '../hooks/useReadingPlan';
 import { ReadingDay } from '../types';
@@ -13,6 +13,7 @@ import {
   formatHumanMonth, 
   formatHumanDate 
 } from '../utils/dateUtils';
+import { supabase } from '../utils/supabaseClient';
 import NoteModal from './NoteModal';
 import TodayCard from './TodayCard';
 
@@ -29,6 +30,34 @@ export default function CalendarView() {
 
   // État pour la modale de note
   const [selectedNoteDate, setSelectedNoteDate] = useState<string | null>(null);
+  const [dailyContentMap, setDailyContentMap] = useState<Record<string, { hasAudio: boolean; hasVideo: boolean; hasTeaching: boolean }>>({});
+
+  // Charger les indicateurs de médias et d'enseignements
+  useEffect(() => {
+    const fetchDailyContentsInfo = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('daily_contents')
+          .select('date, audio_url, video_url, teaching_content');
+        
+        if (error) throw error;
+
+        const map: Record<string, { hasAudio: boolean; hasVideo: boolean; hasTeaching: boolean }> = {};
+        data?.forEach(item => {
+          map[item.date] = {
+            hasAudio: !!item.audio_url,
+            hasVideo: !!item.video_url,
+            hasTeaching: !!item.teaching_content,
+          };
+        });
+        setDailyContentMap(map);
+      } catch (e) {
+        console.error("Erreur lors du chargement des indicateurs du calendrier :", e);
+      }
+    };
+
+    fetchDailyContentsInfo();
+  }, []);
 
   // Mettre à jour l'URL avec les nouveaux paramètres
   const updateUrl = (params: {
@@ -288,7 +317,7 @@ export default function CalendarView() {
                 >
                   {/* Jour et indicateur */}
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1.5">
                       <span className={`text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center ${
                         isToday 
                           ? 'bg-amber-500 text-white shadow-sm' 
@@ -300,6 +329,21 @@ export default function CalendarView() {
                         <span className="text-[9px] font-medium text-zinc-400 dark:text-zinc-500">
                           J.{day.dayNumber}
                         </span>
+                      )}
+                      
+                      {/* Petits indicateurs discrets de contenu quotidien */}
+                      {dailyContentMap[day.date] && (
+                        <div className="flex gap-0.5 items-center">
+                          {dailyContentMap[day.date].hasAudio && (
+                            <span className="w-1 h-1 rounded-full bg-amber-600" title="Audio disponible" />
+                          )}
+                          {dailyContentMap[day.date].hasVideo && (
+                            <span className="w-1 h-1 rounded-full bg-red-500" title="Vidéo disponible" />
+                          )}
+                          {dailyContentMap[day.date].hasTeaching && (
+                            <span className="w-1 h-1 rounded-full bg-emerald-500" title="Enseignement disponible" />
+                          )}
+                        </div>
                       )}
                     </div>
                     
