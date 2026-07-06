@@ -33,7 +33,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   // Valeurs par défaut robustes
   const defaultTitle = `${siteName} — Plan de lecture biblique`;
-  const defaultDescription = 'Rejoins le Défi Bible 2026 - 2030, un plan de lecture biblique structuré sur 4 ans et 3 mois, semaine par semaine.';
+  const defaultDescription = 'Par le Frère Fabrice GUEDENON';
 
   if (isNaN(dayNum) || dayNum < 1) {
     return {
@@ -91,7 +91,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const description = excerpt
     ? `${humanDate} • ${excerpt}`
-    : `Plan de lecture – Jour ${dayNum}, Semaine ${weekIndex} • ${humanDate}. Rejoins le Défi Bible 2026 - 2030, un plan de lecture biblique structuré sur 4 ans et 3 mois.`;
+    : `Plan de lecture – Jour ${dayNum}, Semaine ${weekIndex} • ${humanDate}. Par le Frère Fabrice GUEDENON`;
 
   return {
     title,
