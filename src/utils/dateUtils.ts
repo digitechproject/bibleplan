@@ -34,13 +34,9 @@ export function getWeekIndex(dateStr: string): number {
   return Math.floor(diff / 7) + 1;
 }
 
-export function getDayNumber(dateStr: string): number | null {
-  const dayOfWeek = getDayOfWeek(dateStr);
-  if (dayOfWeek === 6) {
-    return null; // Pas de jour de lecture le dimanche (jour de révision)
-  }
-  const weekIndex = getWeekIndex(dateStr);
-  return (weekIndex - 1) * 6 + dayOfWeek + 1;
+export function getDayNumber(dateStr: string): number {
+  const diff = getDaysDifference(dateStr, START_DATE_STR);
+  return diff + 1;
 }
 
 export function getDayOfWeek(dateStr: string): number {
