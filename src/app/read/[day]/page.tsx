@@ -98,7 +98,7 @@ export default function ReadingDayPage() {
   const getShareText = () => {
     const rd = getReadingDay(dateStr);
     const title = content?.teaching_title || rd?.label || `Jour ${dayNum}`;
-    return `📖 Défi Bible 365 — Jour ${dayNum}\n${title}\n\nRejoins le défi ! ${getPageUrl()}`;
+    return `📖 Défi Bible 2026 - 2030 — Jour ${dayNum}\n${title}\n\nRejoins le défi ! ${getPageUrl()}`;
   };
 
   const handleShareWhatsApp = () => {
@@ -111,8 +111,8 @@ export default function ReadingDayPage() {
     const title = content?.teaching_title || rd?.label || `Jour ${dayNum}`;
     // Pour navigator.share : on met le lien UNIQUEMENT dans url (pas dans text)
     // pour éviter la duplication automatique sur WhatsApp/iOS
-    const shareTitle = `Jour ${dayNum} — ${title} | Défi Bible 365`;
-    const shareText = `📖 Défi Bible 365 — Jour ${dayNum}\n${title}`;
+    const shareTitle = `Jour ${dayNum} — ${title} | Défi Bible 2026 - 2030`;
+    const shareText = `📖 Défi Bible 2026 - 2030 — Jour ${dayNum}\n${title}`;
 
     if (navigator.share) {
       try {

@@ -29,11 +29,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const dayNum = parseInt(resolvedParams.day, 10);
 
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bibleplan-bice.vercel.app').replace(/\/$/, '');
-  const siteName = 'Défi Bible 365';
+  const siteName = 'Défi Bible 2026 - 2030';
 
   // Valeurs par défaut robustes
   const defaultTitle = `${siteName} — Plan de lecture biblique`;
-  const defaultDescription = 'Rejoins le défi de lecture de la Bible en 365 jours. Un plan structuré, semaine par semaine.';
+  const defaultDescription = 'Rejoins le Défi Bible 2026 - 2030, un plan de lecture biblique structuré sur 4 ans et 3 mois, semaine par semaine.';
 
   if (isNaN(dayNum) || dayNum < 1) {
     return {
@@ -91,7 +91,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const description = excerpt
     ? `${humanDate} • ${excerpt}`
-    : `Plan de lecture – Jour ${dayNum}, Semaine ${weekIndex} • ${humanDate}. Rejoins le défi de lecture biblique en 365 jours.`;
+    : `Plan de lecture – Jour ${dayNum}, Semaine ${weekIndex} • ${humanDate}. Rejoins le Défi Bible 2026 - 2030, un plan de lecture biblique structuré sur 4 ans et 3 mois.`;
 
   return {
     title,
