@@ -51,10 +51,7 @@ export default function AdminDashboardPage() {
         let videos = 0;
 
         for (let i = 1; i <= 365; i++) {
-          const dayIndex = i - 1;
-          const weekIndex = Math.floor(dayIndex / 6) + 1;
-          const dayOfWeek = dayIndex % 6;
-          const daysOffset = (weekIndex - 1) * 7 + dayOfWeek;
+          const daysOffset = i - 1;
           const dateStr = addDays(START_DATE_STR, daysOffset);
 
           // Chercher le contenu Supabase correspondant

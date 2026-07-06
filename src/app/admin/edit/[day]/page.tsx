@@ -18,11 +18,9 @@ export default function AdminEditDayPage() {
   const { user, profile, isMounted } = useReadingPlan();
 
   // Calculer la date correspondante à partir du numéro de jour
-  const dayIndex = dayNum - 1;
-  const weekIndex = Math.floor(dayIndex / 6) + 1;
-  const dayOfWeek = dayIndex % 6;
-  const daysOffset = (weekIndex - 1) * 7 + dayOfWeek;
+  const daysOffset = dayNum - 1;
   const dateStr = addDays(START_DATE_STR, daysOffset);
+  const weekIndex = Math.floor(daysOffset / 7) + 1;
 
   // États du formulaire
   const [chapterOverwrite, setChapterOverwrite] = useState('');
