@@ -99,7 +99,7 @@ export default function Login({ onSuccess, onCancel }: LoginProps) {
     <div className="w-full max-w-md mx-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xl overflow-hidden p-6 space-y-6">
       <div className="text-center space-y-2">
         <h2 className="text-2xl font-extrabold text-zinc-900 dark:text-zinc-50 tracking-tight">
-          {step === 'email' ? 'Connexion à Bible Plan' : 'Valider mon e-mail'}
+          {step === 'email' ? 'Connexion à Défi Bible 2026 - 2030' : 'Valider mon e-mail'}
         </h2>
         <p className="text-xs text-zinc-500 dark:text-zinc-400">
           {step === 'email' 

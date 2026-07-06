@@ -52,12 +52,12 @@ export async function POST(request: Request) {
         'accept': 'application/json',
       },
       body: JSON.stringify({
-        sender: { name: "Plan de Lecture Biblique", email: "noreply@bibleplan.fr" },
+        sender: { name: "Défi Bible 2026 - 2030", email: "noreply@defibible.fr" },
         to: [{ email: email }],
         subject: `${code} est votre code de connexion`,
         htmlContent: `
           <div style="font-family: sans-serif; padding: 20px; color: #333; max-width: 500px; margin: auto; border: 1px solid #eee; border-radius: 12px;">
-            <h2 style="color: #d97706; text-align: center;">Connexion à Bible Plan</h2>
+            <h2 style="color: #d97706; text-align: center;">Connexion à Défi Bible 2026 - 2030</h2>
             <p>Bonjour,</p>
             <p>Voici votre code de vérification pour vous connecter à votre espace de lecture biblique :</p>
             <div style="background-color: #fef3c7; border: 1.5px dashed #d97706; border-radius: 8px; padding: 15px; text-align: center; margin: 20px 0;">

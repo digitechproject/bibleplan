@@ -32,12 +32,12 @@ export default function AdminSidebar() {
     <aside className="w-64 bg-zinc-900 text-zinc-100 min-h-screen flex flex-col border-r border-zinc-800 shrink-0">
       {/* Brand Header */}
       <div className="p-6 border-b border-zinc-800 flex items-center space-x-3">
-        <div className="w-8 h-8 rounded-xl bg-amber-500 flex items-center justify-center text-zinc-900 font-extrabold text-lg">
-          B
+        <div className="w-8 h-8 rounded-xl bg-amber-500 flex items-center justify-center text-zinc-900 font-extrabold text-[13px]">
+          DB
         </div>
         <div>
-          <h1 className="font-extrabold text-sm tracking-tight text-white">Bible Plan</h1>
-          <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Espace Enseignant</p>
+          <h1 className="font-extrabold text-xs tracking-tight text-white">Défi Bible 2026 - 2030</h1>
+          <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">Espace Enseignant</p>
         </div>
       </div>
 

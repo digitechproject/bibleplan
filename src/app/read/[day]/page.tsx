@@ -214,7 +214,9 @@ export default function ReadingDayPage() {
         <h1 className="text-3xl sm:text-4xl font-extrabold text-zinc-950 dark:text-zinc-50 tracking-tight leading-tight">
           {displayTitle}
         </h1>
-        <p className="text-xs text-zinc-550 font-bold">{formatHumanDate(dateStr)}</p>
+        <p className="text-xs text-zinc-550 font-bold">
+          {formatHumanDate(dateStr)} • Par le frère Fabrice GUEDENON
+        </p>
       </div>
 
       {/* Intégration YouTube */}
