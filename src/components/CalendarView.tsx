@@ -515,7 +515,7 @@ export default function CalendarView() {
                 <div className="space-y-2">
                   {/* Actions */}
                   <div className="flex items-center gap-2">
-                    {!day.isSunday && (() => {
+                    {(contentDates.has(day.date) || !day.isSunday) && (() => {
                       const isFuture = day.date > todayStr;
                       const isAdmin = user && profile?.role === 'admin';
                       const locked = isFuture && !isAdmin;
@@ -693,7 +693,7 @@ export default function CalendarView() {
                           })()}
                           
                           {/* Lire — conditionnel */}
-                          {!day.isSunday && (() => {
+                          {(contentDates.has(day.date) || !day.isSunday) && (() => {
                             const isFuture = day.date > todayStr;
                             const isAdmin = user && profile?.role === 'admin';
                             const locked = isFuture && !isAdmin;
